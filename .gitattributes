@@ -1,0 +1,6 @@
+# Los scripts de bash deben conservar LF: con CRLF fallan con
+# "$'\r': command not found" al ejecutarse.
+*.sh text eol=lf
+
+# Los .bat se ejecutan en cmd de Windows, que espera CRLF.
+*.bat text eol=crlf
