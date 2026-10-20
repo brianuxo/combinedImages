@@ -100,6 +100,16 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     }))
   }, [])
 
+  // Ocultar la sección de contenido adulto la deja como estaba: sin Adulto
+  // desbloqueado y con el modo adulto desactivado.
+  const lockNsfw = useCallback(() => {
+    setSettings((previous) => ({
+      ...previous,
+      nsfw: { ...previous.nsfw, unlocked: false, enabled: false },
+    }))
+    setNsfwNoticeOpen(false)
+  }, [])
+
   const enableNsfw = useCallback(
     (enabled: boolean) => {
       setSettings((previous) => ({
@@ -136,6 +146,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       update,
       updateProvider,
       unlockNsfw,
+      lockNsfw,
       enableNsfw,
       nsfwNoticeOpen,
       closeNsfwNotice,
@@ -146,6 +157,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       update,
       updateProvider,
       unlockNsfw,
+      lockNsfw,
       enableNsfw,
       nsfwNoticeOpen,
       closeNsfwNotice,

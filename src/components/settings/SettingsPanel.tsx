@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { motion } from 'motion/react'
 import { RotateCcw } from 'lucide-react'
 import { useSettings } from '../../context/settings'
 import { useToast } from '../../context/toast'
@@ -58,7 +59,7 @@ export function SettingsPanel() {
           Activa o esconde proveedores. Los ocultos no aparecen en el inicio ni en la barra
           superior.
         </p>
-        {!settings.nsfw.enabled && (
+        {settings.nsfw.unlocked && !settings.nsfw.enabled && (
           <p className="hint">
             Gelbooru y Rule34 son solo para adultos y aparecen al activar «Incluir resultados
             NSFW».
@@ -107,8 +108,9 @@ export function SettingsPanel() {
       <section className="panel-section">
         <h3>Claves API</h3>
         <p className="section-sub">
-          Pixabay, Gelbooru y Rule34 necesitan clave. Wallhaven y Openverse la aceptan de forma
-          opcional. Todo se guarda únicamente en este navegador.
+          {settings.nsfw.unlocked
+            ? 'Pixabay, Gelbooru y Rule34 necesitan clave. Wallhaven y Openverse la aceptan de forma opcional. Todo se guarda únicamente en este navegador.'
+            : 'Pixabay necesita clave. Wallhaven y Openverse la aceptan de forma opcional. Todo se guarda únicamente en este navegador.'}
         </p>
 
         <ApiKeyField
@@ -126,7 +128,11 @@ export function SettingsPanel() {
           label="Wallhaven"
           value={settings.providers.wallhaven?.apiKey ?? ''}
           placeholder="API key de Wallhaven"
-          hint="Opcional para SFW; obligatoria para incluir NSFW."
+          hint={
+            settings.nsfw.unlocked
+              ? 'Opcional para SFW; obligatoria para incluir contenido adulto.'
+              : 'Opcional para SFW.'
+          }
           helpUrl="https://wallhaven.cc/settings/account"
           onTest={() => testKey('wallhaven')}
           onChange={(value) => updateProvider('wallhaven', { apiKey: value })}
@@ -170,12 +176,7 @@ export function SettingsPanel() {
               onChange={(value) => updateProvider('rule34', { apiKey: value })}
             />
           </>
-        ) : (
-          <p className="hint">
-            Gelbooru y Rule34 piden API key y User ID gratuitos. Desbloquea el contenido adulto
-            para configurarlos.
-          </p>
-        )}
+        ) : null}
       </section>
 
       <section className="panel-section">
@@ -228,8 +229,18 @@ export function SettingsPanel() {
         </div>
       </section>
 
-      {settings.nsfw.unlocked ? (
-        <section className="panel-section nsfw-section" id="nsfw-section">
+      {settings.nsfw.unlocked && (
+        <motion.section
+          className="panel-section nsfw-section"
+          id="nsfw-section"
+          initial={{ opacity: 0, y: 12, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={
+            settings.quality === 'optimo'
+              ? { duration: 0.16 }
+              : { type: 'spring', stiffness: 320, damping: 30 }
+          }
+        >
           <div className="section-head">
             <h3>Contenido adulto</h3>
             <span className="badge badge-warn">desbloqueado</span>
@@ -254,20 +265,9 @@ export function SettingsPanel() {
             Openverse, Wikimedia, Pixabay) no cambian.
           </p>
           <p className="hint">
-            <kbd>F</kbd> vuelve a mostrar esta sección si la ocultas.
+            <kbd>F</kbd> oculta esta sección y desactiva el contenido adulto.
           </p>
-        </section>
-      ) : (
-        <section className="panel-section nsfw-section" id="nsfw-section">
-          <div className="section-head">
-            <h3>Contenido adulto</h3>
-            <span className="badge">oculto</span>
-          </div>
-          <p className="hint">
-            Las fuentes solo adultas (Gelbooru y Rule34) están ocultas. Pulsa <kbd>F</kbd> para
-            mostrar el interruptor y activarlas cuando quieras.
-          </p>
-        </section>
+        </motion.section>
       )}
 
       <section className="panel-section">
@@ -282,16 +282,12 @@ export function SettingsPanel() {
           <span>Datos</span>
           <span className="hint">solo en tu navegador</span>
         </div>
-        <div className="about-row">
-          <span>NSFW</span>
-          <span className="hint">
-            {settings.nsfw.enabled
-              ? 'activo'
-              : settings.nsfw.unlocked
-                ? 'visible, desactivado'
-                : 'oculto · pulsa F'}
-          </span>
-        </div>
+        {settings.nsfw.unlocked && (
+          <div className="about-row">
+            <span>NSFW</span>
+            <span className="hint">{settings.nsfw.enabled ? 'activo' : 'visible, desactivado'}</span>
+          </div>
+        )}
 
         <button
           type="button"

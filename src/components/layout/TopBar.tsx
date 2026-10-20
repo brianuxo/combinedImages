@@ -1,7 +1,5 @@
 import { useRef } from 'react'
 import { Aperture, SlidersHorizontal } from 'lucide-react'
-import { useSettings } from '../../context/settings'
-import { useToast } from '../../context/toast'
 import type { ProviderId } from '../../types'
 import { ProviderStrip } from './ProviderStrip'
 
@@ -10,16 +8,14 @@ export function TopBar({
   onSelect,
   onHome,
   onOpenDrawer,
-  onRevealNsfw,
+  onToggleNsfw,
 }: {
   active: ProviderId | null
   onSelect: (id: ProviderId) => void
   onHome: () => void
   onOpenDrawer: () => void
-  onRevealNsfw: () => void
+  onToggleNsfw: () => void
 }) {
-  const { settings } = useSettings()
-  const { push } = useToast()
   const timerRef = useRef<number | null>(null)
 
   const cancelPress = () => {
@@ -33,12 +29,7 @@ export function TopBar({
     cancelPress()
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null
-      if (settings.nsfw.unlocked) {
-        push('El modo adulto ya está desbloqueado', 'default')
-      } else {
-        onRevealNsfw()
-        push('Opciones de contenido adulto visibles. Actívalas con la casilla.', 'warn')
-      }
+      onToggleNsfw()
     }, 1500)
   }
 

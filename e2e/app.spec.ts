@@ -28,20 +28,37 @@ test.describe('flujo NSFW', () => {
     await expect(page.getByRole('tab', { name: /Rule34/ })).toHaveCount(1)
   })
 
-  test('la tecla F revela el interruptor de contenido adulto', async ({ page }) => {
+  test('la tecla F muestra y vuelve a ocultar el interruptor de contenido adulto', async ({
+    page,
+  }) => {
     await page.goto('/')
     await page.evaluate((key) => localStorage.removeItem(key as string), STORAGE_KEY)
     await page.reload({ waitUntil: 'networkidle' })
 
-    // Por defecto la sección está oculta.
+    // Por defecto no hay sección de contenido adulto ni la palabra NSFW.
     await page.getByRole('button', { name: 'Abrir ajustes' }).click()
-    await expect(page.locator('#nsfw-section')).toContainText('Pulsa F')
+    await expect(page.locator('#nsfw-section')).toHaveCount(0)
+    await expect(page.getByText('NSFW', { exact: true })).toHaveCount(0)
     await page.keyboard.press('Escape')
 
-    // La tecla F la muestra y deja el interruptor a la vista.
+    // La tecla F la hace aparecer de la nada.
     await page.keyboard.press('f')
     await expect(page.getByRole('switch', { name: 'Incluir contenido NSFW' })).toBeVisible()
     await expect(page.locator('#nsfw-section')).toContainText('desbloqueado')
+
+    // Activamos el modo adulto y comprobamos que aparecen las fuentes.
+    await page.getByRole('switch', { name: 'Incluir contenido NSFW' }).click()
+    const modal = page.getByRole('dialog', { name: 'Contenido adulto desbloqueado' })
+    await expect(modal).toBeVisible()
+    await modal.getByRole('button', { name: 'Entendido' }).click()
+    await expect(page.locator('.provider-card')).toHaveCount(11)
+
+    // La tecla F otra vez oculta la sección y desactiva el modo adulto.
+    await page.keyboard.press('f')
+    await expect(page.locator('#nsfw-section')).toHaveCount(0)
+    await expect(page.getByRole('switch', { name: 'Incluir contenido NSFW' })).toHaveCount(0)
+    await expect(page.locator('.provider-card')).toHaveCount(9)
+    await expect(page.getByRole('tab', { name: /Gelbooru/ })).toHaveCount(0)
   })
 
   test('activar el interruptor muestra el aviso y las fuentes adultas', async ({ page }) => {

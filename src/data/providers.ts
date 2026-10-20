@@ -127,7 +127,7 @@ export const PROVIDERS: ProviderMeta[] = [
     name: 'Wallhaven',
     tagline: 'Wallpapers en alta resolución',
     description:
-      'Fondos de pantalla de todo tipo con filtros de pureza, categoría y resolución. La API key es opcional para SFW y obligatoria para NSFW.',
+      'Fondos de pantalla de todo tipo con filtros de pureza, categoría y resolución. La API key es opcional para SFW y obligatoria para contenido adulto.',
     categories: ['Wallpapers', 'Fotografía'],
     mode: 'query',
     accent: ['#22d3ee', '#3b82f6'],

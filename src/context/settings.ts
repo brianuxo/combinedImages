@@ -37,6 +37,8 @@ export interface SettingsApi {
   updateProvider: (id: ProviderId, patch: Partial<ProviderSettings>) => void
   /** Muestra los controles de contenido adulto (atajo F). */
   unlockNsfw: () => void
+  /** Vuelve a ocultarlos y desactiva el contenido adulto (atajo F). */
+  lockNsfw: () => void
   /** Activa o desactiva el contenido adulto. */
   enableNsfw: (enabled: boolean) => void
   nsfwNoticeOpen: boolean
