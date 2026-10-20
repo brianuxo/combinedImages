@@ -28,21 +28,46 @@ test.describe('flujo NSFW', () => {
     await expect(page.getByRole('tab', { name: /Rule34/ })).toHaveCount(1)
   })
 
-  test('muestra el aviso de contenido adulto al desbloquear', async ({ page }) => {
+  test('la tecla F revela el interruptor de contenido adulto', async ({ page }) => {
     await page.goto('/')
-    await page.evaluate(
-      (key) => localStorage.removeItem(key as string),
-      STORAGE_KEY,
-    )
+    await page.evaluate((key) => localStorage.removeItem(key as string), STORAGE_KEY)
     await page.reload({ waitUntil: 'networkidle' })
 
+    // Por defecto la sección está oculta.
     await page.getByRole('button', { name: 'Abrir ajustes' }).click()
-    await page.getByRole('button', { name: 'v0.1.0' }).click({ clickCount: 5 })
+    await expect(page.locator('#nsfw-section')).toContainText('Pulsa F')
+    await page.keyboard.press('Escape')
+
+    // La tecla F la muestra y deja el interruptor a la vista.
+    await page.keyboard.press('f')
+    await expect(page.getByRole('switch', { name: 'Incluir contenido NSFW' })).toBeVisible()
+    await expect(page.locator('#nsfw-section')).toContainText('desbloqueado')
+  })
+
+  test('activar el interruptor muestra el aviso y las fuentes adultas', async ({ page }) => {
+    await page.goto('/')
+    await page.evaluate((key) => localStorage.removeItem(key as string), STORAGE_KEY)
+    await page.reload({ waitUntil: 'networkidle' })
+
+    await page.keyboard.press('f')
+    await page.getByRole('switch', { name: 'Incluir contenido NSFW' }).click()
+
     const modal = page.getByRole('dialog', { name: 'Contenido adulto desbloqueado' })
     await expect(modal).toBeVisible()
-    await expect(modal.getByText('Contenido adulto desbloqueado')).toBeVisible()
     await modal.getByRole('button', { name: 'Entendido' }).click()
-    await expect(modal).toBeHidden()
+
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.provider-card')).toHaveCount(11)
+    await expect(page.getByRole('tab', { name: /Gelbooru/ })).toHaveCount(1)
+    await expect(page.getByRole('tab', { name: /Rule34/ })).toHaveCount(1)
+  })
+
+  test('la activación queda guardada entre recargas', async ({ page }) => {
+    await page.goto('/')
+    await setNsfw(page, true)
+    await page.reload({ waitUntil: 'networkidle' })
+    await expect(page.locator('.provider-card')).toHaveCount(11)
+    await expect(page.getByRole('tab', { name: /Rule34/ })).toHaveCount(1)
   })
 
   test('las fuentes adultas piden credenciales', async ({ page }) => {

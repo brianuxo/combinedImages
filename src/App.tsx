@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { RightDrawer, type DrawerTab } from './components/layout/RightDrawer'
 import { TopBar } from './components/layout/TopBar'
@@ -13,7 +13,7 @@ import type { ProviderId } from './types'
 type View = { name: 'home' } | { name: 'gallery'; provider: ProviderId }
 
 export default function App() {
-  const { settings, nsfwNoticeOpen, closeNsfwNotice } = useSettings()
+  const { settings, unlockNsfw, nsfwNoticeOpen, closeNsfwNotice } = useSettings()
   const [view, setView] = useState<View>({ name: 'home' })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('settings')
@@ -32,6 +32,33 @@ export default function App() {
     setDrawerOpen(true)
   }, [])
 
+  // Atajo F (y pulsación larga en el logo): muestra los controles de
+  // contenido adulto en Ajustes.
+  const revealNsfw = useCallback(() => {
+    unlockNsfw()
+    openDrawer('settings')
+    window.setTimeout(() => {
+      document.getElementById('nsfw-section')?.scrollIntoView({ block: 'center' })
+    }, 320)
+  }, [unlockNsfw, openDrawer])
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.repeat || event.metaKey || event.ctrlKey || event.altKey) return
+      if (event.key.toLowerCase() !== 'f') return
+
+      const target = event.target as HTMLElement | null
+      const tag = target?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable) return
+
+      event.preventDefault()
+      revealNsfw()
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [revealNsfw])
+
   // Si la fuente abierta se oculta o deja de estar disponible, volvemos al inicio.
   // Ajustamos el estado durante el render para no provocar un segundo render en cascada.
   const provider = view.name === 'gallery' ? PROVIDER_MAP[view.provider] : null
@@ -48,6 +75,7 @@ export default function App() {
         active={view.name === 'gallery' ? view.provider : null}
         onSelect={openProvider}
         onHome={goHome}
+        onRevealNsfw={revealNsfw}
         onOpenDrawer={() => openDrawer('settings')}
       />
 

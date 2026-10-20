@@ -12,7 +12,7 @@ import { ProviderIcon } from '../ui/ProviderIcon'
 import { Toggle } from '../ui/Toggle'
 
 export function SettingsPanel() {
-  const { settings, update, updateProvider, unlockNsfw, reset } = useSettings()
+  const { settings, update, updateProvider, unlockNsfw, enableNsfw, reset } = useSettings()
   const { push } = useToast()
   const versionClicks = useRef(0)
 
@@ -29,7 +29,7 @@ export function SettingsPanel() {
     if (versionClicks.current >= 5) {
       versionClicks.current = 0
       unlockNsfw()
-      push('Contenido adulto desbloqueado', 'warn')
+      push('Opciones de contenido adulto visibles', 'warn')
     }
   }
 
@@ -228,8 +228,8 @@ export function SettingsPanel() {
         </div>
       </section>
 
-      {settings.nsfw.unlocked && (
-        <section className="panel-section nsfw-section">
+      {settings.nsfw.unlocked ? (
+        <section className="panel-section nsfw-section" id="nsfw-section">
           <div className="section-head">
             <h3>Contenido adulto</h3>
             <span className="badge badge-warn">desbloqueado</span>
@@ -244,13 +244,28 @@ export function SettingsPanel() {
             <Toggle
               checked={settings.nsfw.enabled}
               label="Incluir contenido NSFW"
-              onChange={(value) => update({ nsfw: { ...settings.nsfw, enabled: value } })}
+              onChange={(value) => enableNsfw(value)}
             />
           </div>
           <p className="hint">
-            Solo se guarda en este dispositivo. Gelbooru y Rule34 solo aparecen con esta opción
-            activa; Wallhaven necesita su API key para devolver NSFW. Las fuentes seguras
-            (Safebooru, Openverse, Wikimedia, Pixabay) no cambian.
+            Al activarlo aparecen en la barra de fuentes y en el inicio las pestañas de Gelbooru y
+            Rule34. La preferencia queda guardada en este navegador, así que no hay que repetirla.
+            Wallhaven necesita su API key para devolver NSFW. Las fuentes seguras (Safebooru,
+            Openverse, Wikimedia, Pixabay) no cambian.
+          </p>
+          <p className="hint">
+            <kbd>F</kbd> vuelve a mostrar esta sección si la ocultas.
+          </p>
+        </section>
+      ) : (
+        <section className="panel-section nsfw-section" id="nsfw-section">
+          <div className="section-head">
+            <h3>Contenido adulto</h3>
+            <span className="badge">oculto</span>
+          </div>
+          <p className="hint">
+            Las fuentes solo adultas (Gelbooru y Rule34) están ocultas. Pulsa <kbd>F</kbd> para
+            mostrar el interruptor y activarlas cuando quieras.
           </p>
         </section>
       )}
@@ -269,7 +284,13 @@ export function SettingsPanel() {
         </div>
         <div className="about-row">
           <span>NSFW</span>
-          <span className="hint">{settings.nsfw.unlocked ? 'desbloqueado' : 'oculto'}</span>
+          <span className="hint">
+            {settings.nsfw.enabled
+              ? 'activo'
+              : settings.nsfw.unlocked
+                ? 'visible, desactivado'
+                : 'oculto · pulsa F'}
+          </span>
         </div>
 
         <button

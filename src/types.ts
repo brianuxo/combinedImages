@@ -90,7 +90,7 @@ export interface Settings {
   blacklist: { tags: string[]; keywords: string[] }
   providers: Record<ProviderId, ProviderSettings>
   proxyUrl: string
-  nsfw: { unlocked: boolean; enabled: boolean }
+  nsfw: { unlocked: boolean; enabled: boolean; acknowledged?: boolean }
 }
 
 export interface SearchArgs {

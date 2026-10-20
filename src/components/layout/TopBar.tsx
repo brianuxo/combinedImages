@@ -10,13 +10,15 @@ export function TopBar({
   onSelect,
   onHome,
   onOpenDrawer,
+  onRevealNsfw,
 }: {
   active: ProviderId | null
   onSelect: (id: ProviderId) => void
   onHome: () => void
   onOpenDrawer: () => void
+  onRevealNsfw: () => void
 }) {
-  const { settings, unlockNsfw } = useSettings()
+  const { settings } = useSettings()
   const { push } = useToast()
   const timerRef = useRef<number | null>(null)
 
@@ -34,8 +36,8 @@ export function TopBar({
       if (settings.nsfw.unlocked) {
         push('El modo adulto ya está desbloqueado', 'default')
       } else {
-        unlockNsfw()
-        push('Contenido adulto desbloqueado. Está en Ajustes.', 'warn')
+        onRevealNsfw()
+        push('Opciones de contenido adulto visibles. Actívalas con la casilla.', 'warn')
       }
     }, 1500)
   }

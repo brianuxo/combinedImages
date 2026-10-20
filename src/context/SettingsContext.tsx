@@ -96,12 +96,29 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const unlockNsfw = useCallback(() => {
     setSettings((previous) => ({
       ...previous,
-      nsfw: { unlocked: true, enabled: previous.nsfw.enabled },
+      nsfw: { ...previous.nsfw, unlocked: true },
     }))
-    setNsfwNoticeOpen(true)
   }, [])
 
-  const closeNsfwNotice = useCallback(() => setNsfwNoticeOpen(false), [])
+  const enableNsfw = useCallback(
+    (enabled: boolean) => {
+      setSettings((previous) => ({
+        ...previous,
+        nsfw: { ...previous.nsfw, unlocked: true, enabled },
+      }))
+      // El aviso de contenido adulto se muestra solo la primera vez.
+      if (enabled && !settings.nsfw.acknowledged) setNsfwNoticeOpen(true)
+    },
+    [settings.nsfw.acknowledged],
+  )
+
+  const closeNsfwNotice = useCallback(() => {
+    setNsfwNoticeOpen(false)
+    setSettings((previous) => ({
+      ...previous,
+      nsfw: { ...previous.nsfw, acknowledged: true },
+    }))
+  }, [])
 
   const reset = useCallback(() => {
     setSettings(DEFAULT_SETTINGS)
@@ -119,11 +136,21 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       update,
       updateProvider,
       unlockNsfw,
+      enableNsfw,
       nsfwNoticeOpen,
       closeNsfwNotice,
       reset,
     }),
-    [settings, update, updateProvider, unlockNsfw, nsfwNoticeOpen, closeNsfwNotice, reset],
+    [
+      settings,
+      update,
+      updateProvider,
+      unlockNsfw,
+      enableNsfw,
+      nsfwNoticeOpen,
+      closeNsfwNotice,
+      reset,
+    ],
   )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>

@@ -6,6 +6,9 @@ Todas las novedades de Combined.
 
 ### Añadido
 
+- **Atajo `F`**: abre Ajustes directamente en la sección *Contenido adulto* con el interruptor a la
+  vista. La activación se guarda en el navegador, así que las fuentes adultas (Gelbooru y Rule34)
+  siguen apareciendo en la barra de fuentes y en el inicio entre recargas.
 - **Gelbooru** y **Rule34** como fuentes adultas: solo aparecen cuando el contenido NSFW está
   activo y necesitan API key + User ID gratuitos.
 - **Wallhaven** (wallpapers; la clave es opcional para SFW y obligatoria para NSFW) y **Pixabay**
