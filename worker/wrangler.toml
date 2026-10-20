@@ -1,0 +1,6 @@
+name = "combined-cors"
+main = "index.js"
+compatibility_date = "2026-01-01"
+
+# Proxy CORS opcional para Konachan, Yande.re y Anime-Pictures.
+# Despliega con: npx wrangler deploy
