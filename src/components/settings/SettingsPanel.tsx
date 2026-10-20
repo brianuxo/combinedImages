@@ -275,7 +275,7 @@ export function SettingsPanel() {
         <div className="about-row">
           <span>Versión</span>
           <button type="button" className="version-button" onClick={handleVersion}>
-            v0.1.0
+            v1.0.0
           </button>
         </div>
         <div className="about-row">

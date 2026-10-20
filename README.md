@@ -12,7 +12,7 @@ SPA para explorar y descargar imágenes y fondos de pantalla de varias fuentes d
 - **Lista negra global** de tags y palabras clave (se envía a los booru como `-tag`).
 - **Calidad** en tres niveles: máxima, general y óptimo (afecta vistas previas, animaciones y resultados por página).
 - **Tema** oscuro con tres variantes y seis colores de acento.
-- **NSFW oculto por defecto**: pulsa la tecla **F** y el panel de Ajustes se abrirá en la sección *Contenido adulto*, con el interruptor a la vista. Al activarlo aparecen **Gelbooru** y **Rule34** en la barra de fuentes y en el inicio; la preferencia queda guardada en el navegador y no hay que repetirla. También funciona manteniendo pulsado el logo 1,5 s.
+- **NSFW oculto por defecto**: el panel de Ajustes no menciona nada de contenido adulto hasta que pulsas la tecla **F**, que hace aparecer la sección *Contenido adulto* con el interruptor a la vista. Al activarlo aparecen **Gelbooru** y **Rule34** en la barra de fuentes y en el inicio; la preferencia queda guardada en el navegador y no hay que repetirla. Pulsando **F** otra vez la sección desaparece y el modo adulto se desactiva. También funciona manteniendo pulsado el logo 1,5 s.
 - **Descarga directa** con fallback al original cuando el servidor no permite CORS.
 - **Claves API por fuente** en Ajustes → Claves API, con el ID de usuario cuando la API lo exige y un botón **«Probar»** que valida la credencial contra la API real.
 

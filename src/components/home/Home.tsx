@@ -71,7 +71,7 @@ export function Home({ onOpen }: { onOpen: (id: ProviderId) => void }) {
           Las imágenes pertenecen a sus autores. Úsalas de forma personal y respeta la licencia
           de cada fuente.
         </p>
-        <span>v0.1 · sin backend · sin tracking</span>
+        <span>v1.0 · sin backend · sin tracking</span>
       </footer>
     </div>
   )
