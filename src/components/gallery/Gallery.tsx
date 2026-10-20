@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence } from 'motion/react'
 import { AlertTriangle, ArrowLeft, KeyRound, Loader2, Lock, Search, X } from 'lucide-react'
-import { useSettings } from '../../context/SettingsContext'
-import { useToast } from '../../context/ToastContext'
+import { useSettings } from '../../context/settings'
+import { useToast } from '../../context/toast'
 import { PROVIDER_MAP } from '../../data/providers'
 import { useInfiniteImages } from '../../hooks/useInfiniteImages'
 import { downloadImage } from '../../lib/download'
@@ -52,10 +52,8 @@ export function Gallery({
         error.status === 403 ||
         (meta.keyMode === 'required' && error.status === 400)))
 
-  useEffect(() => {
-    setSelected(null)
-  }, [provider, query])
-
+  // La galería se monta con `key={provider}` y las búsquedas limpian la
+  // selección al aplicarse, así que no hace falta un efecto para reiniciarla.
   useEffect(() => {
     const node = sentinelRef.current
     if (!node) return

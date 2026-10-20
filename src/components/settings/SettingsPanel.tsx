@@ -1,9 +1,11 @@
 import { useRef } from 'react'
 import { RotateCcw } from 'lucide-react'
-import { useSettings } from '../../context/SettingsContext'
-import { useToast } from '../../context/ToastContext'
-import { PROVIDERS } from '../../data/providers'
+import { useSettings } from '../../context/settings'
+import { useToast } from '../../context/toast'
+import { PROVIDERS, PROVIDER_MAP } from '../../data/providers'
+import { probeProviderKey } from '../../lib/providers/probe'
 import { isProviderInSettings, isProviderVisible } from '../../lib/visibility'
+import type { ProviderId } from '../../types'
 import { ApiKeyField } from './ApiKeyField'
 import { ChipInput } from '../ui/ChipInput'
 import { ProviderIcon } from '../ui/ProviderIcon'
@@ -29,6 +31,18 @@ export function SettingsPanel() {
       unlockNsfw()
       push('Contenido adulto desbloqueado', 'warn')
     }
+  }
+
+  const testKey = async (provider: ProviderId) => {
+    const current = settings.providers[provider]
+    const result = await probeProviderKey(provider, {
+      apiKey: current?.apiKey,
+      userId: current?.userId,
+      proxyUrl: settings.proxyUrl,
+      signal: new AbortController().signal,
+    })
+    const name = PROVIDER_MAP[provider].name
+    push(`${name}: ${result.message}`, result.ok ? 'success' : 'warn')
   }
 
   return (
@@ -104,6 +118,7 @@ export function SettingsPanel() {
           hint="Necesaria para buscar fotos e ilustraciones."
           helpUrl="https://pixabay.com/api/docs/"
           required
+          onTest={() => testKey('pixabay')}
           onChange={(value) => updateProvider('pixabay', { apiKey: value })}
         />
 
@@ -113,6 +128,7 @@ export function SettingsPanel() {
           placeholder="API key de Wallhaven"
           hint="Opcional para SFW; obligatoria para incluir NSFW."
           helpUrl="https://wallhaven.cc/settings/account"
+          onTest={() => testKey('wallhaven')}
           onChange={(value) => updateProvider('wallhaven', { apiKey: value })}
         />
 
@@ -122,6 +138,7 @@ export function SettingsPanel() {
           placeholder="Token personal de Openverse"
           hint="Sin token funciona con límites bajos."
           helpUrl="https://api.openverse.org/v1/"
+          onTest={() => testKey('openverse')}
           onChange={(value) => updateProvider('openverse', { apiKey: value })}
         />
 
@@ -136,6 +153,7 @@ export function SettingsPanel() {
               required
               userId={settings.providers.gelbooru?.userId ?? ''}
               onUserIdChange={(value) => updateProvider('gelbooru', { userId: value })}
+              onTest={() => testKey('gelbooru')}
               onChange={(value) => updateProvider('gelbooru', { apiKey: value })}
             />
 
@@ -148,6 +166,7 @@ export function SettingsPanel() {
               required
               userId={settings.providers.rule34?.userId ?? ''}
               onUserIdChange={(value) => updateProvider('rule34', { userId: value })}
+              onTest={() => testKey('rule34')}
               onChange={(value) => updateProvider('rule34', { apiKey: value })}
             />
           </>

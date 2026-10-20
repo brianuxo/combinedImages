@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Loader2, Plug } from 'lucide-react'
 
 export function ApiKeyField({
   label,
@@ -12,6 +12,7 @@ export function ApiKeyField({
   required = false,
   userId,
   onUserIdChange,
+  onTest,
 }: {
   label: string
   value: string
@@ -23,8 +24,10 @@ export function ApiKeyField({
   required?: boolean
   userId?: string
   onUserIdChange?: (value: string) => void
+  onTest?: () => Promise<void>
 }) {
   const [show, setShow] = useState(false)
+  const [testing, setTesting] = useState(false)
 
   return (
     <div className="field">
@@ -53,6 +56,24 @@ export function ApiKeyField({
         >
           {show ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
+        {onTest && (
+          <button
+            type="button"
+            className="icon-btn small"
+            aria-label={`Probar la clave de ${label}`}
+            disabled={testing}
+            onClick={async () => {
+              setTesting(true)
+              try {
+                await onTest()
+              } finally {
+                setTesting(false)
+              }
+            }}
+          >
+            {testing ? <Loader2 size={16} className="spin" /> : <Plug size={16} />}
+          </button>
+        )}
       </div>
 
       {onUserIdChange && (

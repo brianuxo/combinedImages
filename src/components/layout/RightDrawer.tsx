@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { Gauge, Palette, SlidersHorizontal, X } from 'lucide-react'
-import { useSettings } from '../../context/SettingsContext'
+import { useSettings } from '../../context/settings'
 import { QualityPanel } from '../settings/QualityPanel'
 import { SettingsPanel } from '../settings/SettingsPanel'
 import { ThemePanel } from '../settings/ThemePanel'

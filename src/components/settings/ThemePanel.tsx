@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react'
-import { ACCENTS, useSettings } from '../../context/SettingsContext'
+import { ACCENTS, useSettings } from '../../context/settings'
 import type { ThemeId } from '../../types'
 
 const THEMES: { id: ThemeId; name: string; description: string }[] = [

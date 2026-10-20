@@ -32,14 +32,13 @@ export function Lightbox({
   onDownload: (item: ImageItem) => void
 }) {
   const item = items[index]
-  const [loaded, setLoaded] = useState(false)
+  // Guardamos la clave de la imagen cargada en vez de un booleano para no
+  // necesitar un efecto que lo reinicie al navegar.
+  const [loadedKey, setLoadedKey] = useState<string | null>(null)
+  const loaded = Boolean(item) && loadedKey === item.key
   const reduced =
     typeof window !== 'undefined' &&
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-  useEffect(() => {
-    setLoaded(false)
-  }, [item?.key])
 
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -87,7 +86,7 @@ export function Lightbox({
               alt={item.tags.slice(0, 5).join(', ') || item.providerLabel}
               className={loaded ? 'is-loaded' : ''}
               referrerPolicy={item.noReferrer ? 'no-referrer' : undefined}
-              onLoad={() => setLoaded(true)}
+              onLoad={() => setLoadedKey(item.key)}
               initial={{ opacity: 0, scale: reduced ? 1 : 0.97 }}
               animate={{ opacity: loaded ? 1 : 0.2, scale: 1 }}
               exit={{ opacity: 0 }}

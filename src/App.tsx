@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { RightDrawer, type DrawerTab } from './components/layout/RightDrawer'
 import { TopBar } from './components/layout/TopBar'
 import { Gallery } from './components/gallery/Gallery'
 import { Home } from './components/home/Home'
-import { useSettings } from './context/SettingsContext'
+import { NsfwNotice } from './components/settings/NsfwNotice'
+import { useSettings } from './context/settings'
 import { PROVIDER_MAP } from './data/providers'
 import { isProviderVisible } from './lib/visibility'
 import type { ProviderId } from './types'
@@ -12,7 +13,7 @@ import type { ProviderId } from './types'
 type View = { name: 'home' } | { name: 'gallery'; provider: ProviderId }
 
 export default function App() {
-  const { settings } = useSettings()
+  const { settings, nsfwNoticeOpen, closeNsfwNotice } = useSettings()
   const [view, setView] = useState<View>({ name: 'home' })
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [drawerTab, setDrawerTab] = useState<DrawerTab>('settings')
@@ -32,13 +33,11 @@ export default function App() {
   }, [])
 
   // Si la fuente abierta se oculta o deja de estar disponible, volvemos al inicio.
-  useEffect(() => {
-    if (view.name !== 'gallery') return
-    const provider = PROVIDER_MAP[view.provider]
-    if (!provider || !isProviderVisible(provider, settings)) {
-      setView({ name: 'home' })
-    }
-  }, [settings, view])
+  // Ajustamos el estado durante el render para no provocar un segundo render en cascada.
+  const provider = view.name === 'gallery' ? PROVIDER_MAP[view.provider] : null
+  if (view.name === 'gallery' && (!provider || !isProviderVisible(provider, settings))) {
+    setView({ name: 'home' })
+  }
 
   return (
     <div className="app">
@@ -88,6 +87,8 @@ export default function App() {
         onTab={setDrawerTab}
         onClose={() => setDrawerOpen(false)}
       />
+
+      <NsfwNotice open={nsfwNoticeOpen} onClose={closeNsfwNotice} />
     </div>
   )
 }

@@ -1,23 +1,12 @@
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react'
+  DEFAULT_SETTINGS,
+  SettingsContext,
+  defaultProviders,
+  type SettingsApi,
+} from './settings'
 import { PROVIDER_IDS } from '../data/providers'
 import type { ProviderId, ProviderSettings, Settings } from '../types'
-
-export const ACCENTS = [
-  { id: 'violet', label: 'Violeta', value: '#7c6cff' },
-  { id: 'cyan', label: 'Cian', value: '#22d3ee' },
-  { id: 'emerald', label: 'Esmeralda', value: '#34d399' },
-  { id: 'amber', label: 'Ámbar', value: '#f59e0b' },
-  { id: 'rose', label: 'Rosa', value: '#fb7185' },
-  { id: 'blue', label: 'Azul', value: '#60a5fa' },
-] as const
 
 const STORAGE_KEY = 'combined.settings.v1'
 
@@ -26,26 +15,6 @@ const THEME_COLOR = {
   midnight: '#04060d',
   contrast: '#000000',
 } as const
-
-function defaultProviders(): Record<ProviderId, ProviderSettings> {
-  return PROVIDER_IDS.reduce(
-    (accumulator, id) => {
-      accumulator[id] = { hidden: false }
-      return accumulator
-    },
-    {} as Record<ProviderId, ProviderSettings>,
-  )
-}
-
-export const DEFAULT_SETTINGS: Settings = {
-  theme: 'dark',
-  accent: ACCENTS[0].value,
-  quality: 'general',
-  blacklist: { tags: [], keywords: [] },
-  providers: defaultProviders(),
-  proxyUrl: '',
-  nsfw: { unlocked: false, enabled: false },
-}
 
 function loadSettings(): Settings {
   try {
@@ -83,18 +52,9 @@ function accentForeground(hex: string): string {
   return luminance > 0.62 ? '#090a0f' : '#ffffff'
 }
 
-interface SettingsApi {
-  settings: Settings
-  update: (patch: Partial<Settings>) => void
-  updateProvider: (id: ProviderId, patch: Partial<ProviderSettings>) => void
-  unlockNsfw: () => void
-  reset: () => void
-}
-
-const SettingsContext = createContext<SettingsApi | null>(null)
-
 export function SettingsProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<Settings>(loadSettings)
+  const [nsfwNoticeOpen, setNsfwNoticeOpen] = useState(false)
 
   useEffect(() => {
     try {
@@ -138,10 +98,14 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       ...previous,
       nsfw: { unlocked: true, enabled: previous.nsfw.enabled },
     }))
+    setNsfwNoticeOpen(true)
   }, [])
+
+  const closeNsfwNotice = useCallback(() => setNsfwNoticeOpen(false), [])
 
   const reset = useCallback(() => {
     setSettings(DEFAULT_SETTINGS)
+    setNsfwNoticeOpen(false)
     try {
       localStorage.removeItem(STORAGE_KEY)
     } catch {
@@ -150,15 +114,17 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo<SettingsApi>(
-    () => ({ settings, update, updateProvider, unlockNsfw, reset }),
-    [settings, update, updateProvider, unlockNsfw, reset],
+    () => ({
+      settings,
+      update,
+      updateProvider,
+      unlockNsfw,
+      nsfwNoticeOpen,
+      closeNsfwNotice,
+      reset,
+    }),
+    [settings, update, updateProvider, unlockNsfw, nsfwNoticeOpen, closeNsfwNotice, reset],
   )
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>
-}
-
-export function useSettings(): SettingsApi {
-  const context = useContext(SettingsContext)
-  if (!context) throw new Error('useSettings debe usarse dentro de SettingsProvider')
-  return context
 }

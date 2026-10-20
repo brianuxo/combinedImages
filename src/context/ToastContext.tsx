@@ -1,34 +1,7 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import { AlertTriangle, CheckCircle2, Info, X, XCircle } from 'lucide-react'
-
-export type ToastTone = 'default' | 'success' | 'warn' | 'error'
-
-interface ToastAction {
-  label: string
-  href: string
-}
-
-interface Toast {
-  id: string
-  message: string
-  tone: ToastTone
-  action?: ToastAction
-}
-
-interface ToastApi {
-  push: (message: string, tone?: ToastTone, action?: ToastAction) => void
-}
-
-const ToastContext = createContext<ToastApi | null>(null)
+import { ToastContext, type Toast, type ToastApi } from './toast'
 
 const ICONS = {
   default: Info,
@@ -46,7 +19,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const push = useCallback(
-    (message: string, tone: ToastTone = 'default', action?: ToastAction) => {
+    (message: string, tone: Toast['tone'] = 'default', action?: Toast['action']) => {
       const id =
         typeof crypto !== 'undefined' && 'randomUUID' in crypto
           ? crypto.randomUUID()
@@ -104,10 +77,4 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       </div>
     </ToastContext.Provider>
   )
-}
-
-export function useToast(): ToastApi {
-  const context = useContext(ToastContext)
-  if (!context) throw new Error('useToast debe usarse dentro de ToastProvider')
-  return context
 }

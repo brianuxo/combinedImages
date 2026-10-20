@@ -1,5 +1,5 @@
 import { Check, Feather, Gauge, Sparkles } from 'lucide-react'
-import { useSettings } from '../../context/SettingsContext'
+import { useSettings } from '../../context/settings'
 import { QUALITY_PAGE_SIZE } from '../../lib/format'
 import type { Quality } from '../../types'
 

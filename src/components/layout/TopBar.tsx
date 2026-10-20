@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import { Aperture, SlidersHorizontal } from 'lucide-react'
-import { useSettings } from '../../context/SettingsContext'
-import { useToast } from '../../context/ToastContext'
+import { useSettings } from '../../context/settings'
+import { useToast } from '../../context/toast'
 import type { ProviderId } from '../../types'
 import { ProviderStrip } from './ProviderStrip'
 

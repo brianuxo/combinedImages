@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useSettings } from '../../context/SettingsContext'
+import { useSettings } from '../../context/settings'
 import { PROVIDERS } from '../../data/providers'
 import { isProviderVisible } from '../../lib/visibility'
 import type { ProviderId } from '../../types'

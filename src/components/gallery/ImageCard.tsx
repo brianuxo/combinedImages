@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Download, ExternalLink } from 'lucide-react'
 import type { ImageItem } from '../../types'
 
@@ -11,15 +11,11 @@ export function ImageCard({
   onOpen: () => void
   onDownload: (item: ImageItem) => void
 }) {
+  // La galería monta cada tarjeta con `key={item.key}`, así que el estado
+  // se reinicia solo al cambiar de imagen.
   const [source, setSource] = useState(item.thumb)
   const [failed, setFailed] = useState(false)
   const [loaded, setLoaded] = useState(false)
-
-  useEffect(() => {
-    setSource(item.thumb)
-    setFailed(false)
-    setLoaded(false)
-  }, [item.key, item.thumb])
 
   const ratio =
     item.width > 0 && item.height > 0
