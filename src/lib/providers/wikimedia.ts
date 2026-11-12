@@ -30,7 +30,7 @@ function stripHtml(value?: string): string | undefined {
   return text || undefined
 }
 
-const THUMB_WIDTH = { max: 1600, general: 1000, optimo: 560 } as const
+const THUMB_WIDTH = { max: 1600, general: 1280, optimo: 960 } as const
 
 export async function searchWikimedia(args: SearchArgs): Promise<SearchResponse> {
   const params = new URLSearchParams({

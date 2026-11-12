@@ -1,13 +1,6 @@
 import type { ProviderId } from '../types'
-
-/** En desarrollo reescribimos estas APIs a través del proxy de Vite. */
-const DEV_REWRITES: Partial<Record<ProviderId, [string, string]>> = {
-  konachan: ['https://konachan.com', '/proxy/konachan'],
-  yandere: ['https://yande.re', '/proxy/yandere'],
-  'anime-pictures': ['https://api.anime-pictures.net', '/proxy/anime-pictures'],
-  gelbooru: ['https://gelbooru.com', '/proxy/gelbooru'],
-  wallhaven: ['https://wallhaven.cc', '/proxy/wallhaven'],
-}
+import { hasServerProxy } from './env'
+import { apiRoute, buildProxyUrl } from './proxy'
 
 export class HttpError extends Error {
   status: number
@@ -36,13 +29,9 @@ export class AuthRequiredError extends Error {
   }
 }
 
-export function buildProxyUrl(template: string, target: string): string {
-  if (template.includes('{url}')) {
-    return template.replace('{url}', encodeURIComponent(target))
-  }
-  const separator = template.includes('?') ? '&' : '?'
-  return `${template}${separator}url=${encodeURIComponent(target)}`
-}
+// Reexportados para no romper las importaciones existentes.
+export { buildProxyUrl } from './proxy'
+export { hasServerProxy, isLocalHost } from './env'
 
 interface FetchJsonOptions {
   provider: ProviderId
@@ -52,32 +41,50 @@ interface FetchJsonOptions {
   needsProxy?: boolean
 }
 
+async function fetchJsonFrom<T>(url: string, options: FetchJsonOptions): Promise<T> {
+  const response = await fetch(url, {
+    signal: options.signal,
+    headers: { Accept: 'application/json', ...options.headers },
+  })
+  if (!response.ok) throw new HttpError(response.status)
+  return (await response.json()) as T
+}
+
 export async function fetchJson<T>(url: string, options: FetchJsonOptions): Promise<T> {
-  const rewrite = DEV_REWRITES[options.provider]
-  const primary =
-    import.meta.env.DEV && rewrite ? url.replace(rewrite[0], rewrite[1]) : url
+  const route = apiRoute(options.provider)
+  // El servidor de Vite sirve estas rutas tanto en `dev` como en `preview`.
+  const local = hasServerProxy()
+  const primary = local && route ? url.replace(route.origin, route.path) : url
 
   try {
-    const response = await fetch(primary, {
-      signal: options.signal,
-      headers: { Accept: 'application/json', ...options.headers },
-    })
-    if (!response.ok) throw new HttpError(response.status)
-    return (await response.json()) as T
+    return await fetchJsonFrom<T>(primary, options)
   } catch (error) {
     if (error instanceof HttpError) throw error
     if (error instanceof DOMException && error.name === 'AbortError') throw error
+
+    // Un despliegue propio puede reenviar `/proxy/*` al host original (ver
+    // README). Si esa ruta no existe, seguimos con el proxy configurado por
+    // el usuario en Ajustes -> Red.
+    if (route && !local) {
+      try {
+        return await fetchJsonFrom<T>(url.replace(route.origin, route.path), options)
+      } catch (proxyError) {
+        if (proxyError instanceof DOMException && proxyError.name === 'AbortError') {
+          throw proxyError
+        }
+        // Un 404 significa que no hay proxy en este origen: probamos el
+        // siguiente. Cualquier otro error es real y se propaga.
+        if (proxyError instanceof HttpError && proxyError.status !== 404) {
+          throw proxyError
+        }
+      }
+    }
 
     const proxyUrl = options.proxyUrl?.trim()
     if (proxyUrl) {
       try {
         // No reenviamos credenciales al proxy: solo la petición pública.
-        const response = await fetch(buildProxyUrl(proxyUrl, url), {
-          signal: options.signal,
-          headers: { Accept: 'application/json' },
-        })
-        if (!response.ok) throw new HttpError(response.status)
-        return (await response.json()) as T
+        return await fetchJsonFrom<T>(buildProxyUrl(proxyUrl, url), options)
       } catch (proxyError) {
         if (proxyError instanceof HttpError) throw proxyError
         if (proxyError instanceof DOMException && proxyError.name === 'AbortError') {

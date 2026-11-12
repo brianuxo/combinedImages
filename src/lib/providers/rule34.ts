@@ -30,7 +30,9 @@ const RATING: Record<string, Rating> = {
 function normalize(post: Rule34Post, args: SearchArgs): ImageItem {
   const full = post.file_url || post.sample_url || post.preview_url || ''
   const sample = post.sample_url || post.file_url || post.preview_url || ''
-  const thumb = post.preview_url || sample
+  // Tamaño medio para la rejilla; el thumbnail original (~150 px) se veía
+  // borroso en el móvil.
+  const thumb = post.sample_url || post.preview_url || full
 
   const preview =
     args.quality === 'max'

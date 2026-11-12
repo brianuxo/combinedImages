@@ -26,7 +26,9 @@ const RATING: Record<string, Rating> = {
 function normalize(post: DanbooruPost, provider: 'danbooru' | 'safebooru', args: SearchArgs): ImageItem {
   const full = post.file_url || post.large_file_url || post.preview_file_url || ''
   const sample = post.large_file_url || post.file_url || post.preview_file_url || ''
-  const thumb = post.preview_file_url || sample
+  // La miniatura de la rejilla es el tamaño medio: con el preview de 180 px
+  // las tarjetas se veían borrosas en pantallas de alta densidad.
+  const thumb = post.large_file_url || post.preview_file_url || sample
 
   const preview =
     args.quality === 'max'

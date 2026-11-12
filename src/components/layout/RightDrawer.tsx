@@ -19,11 +19,13 @@ export function RightDrawer({
   tab,
   onTab,
   onClose,
+  onToggleNsfw,
 }: {
   open: boolean
   tab: DrawerTab
   onTab: (tab: DrawerTab) => void
   onClose: () => void
+  onToggleNsfw: () => void
 }) {
   const { settings } = useSettings()
   const reduced = settings.quality === 'optimo'
@@ -118,7 +120,7 @@ export function RightDrawer({
             </nav>
 
             <div className="drawer-body">
-              {tab === 'settings' && <SettingsPanel />}
+              {tab === 'settings' && <SettingsPanel onToggleNsfw={onToggleNsfw} />}
               {tab === 'theme' && <ThemePanel />}
               {tab === 'quality' && <QualityPanel />}
             </div>

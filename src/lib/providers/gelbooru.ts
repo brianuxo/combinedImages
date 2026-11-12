@@ -1,6 +1,6 @@
 import type { ImageItem, Rating, SearchArgs, SearchResponse } from '../../types'
 import { toBooruExclusions } from '../blacklist'
-import { AuthRequiredError, fetchJson } from '../http'
+import { AuthRequiredError, HttpError, fetchJson } from '../http'
 import { mediaUrl } from '../media'
 
 interface GelbooruPost {
@@ -31,7 +31,9 @@ const RATING: Record<string, Rating> = {
 function normalize(post: GelbooruPost, args: SearchArgs): ImageItem {
   const full = post.file_url || post.sample_url || post.preview_url || ''
   const sample = post.sample_url || post.file_url || post.preview_url || ''
-  const thumb = post.preview_url || sample
+  // Tamaño medio para la rejilla; el thumbnail original (~150 px) se veía
+  // borroso en el móvil.
+  const thumb = post.sample_url || post.preview_url || full
 
   const preview =
     args.quality === 'max'
@@ -81,15 +83,25 @@ export async function searchGelbooru(args: SearchArgs): Promise<SearchResponse> 
     user_id: args.userId.trim(),
   })
 
-  const data = await fetchJson<GelbooruResponse>(
-    `https://gelbooru.com/index.php?${params.toString()}`,
-    {
+  const url = `https://gelbooru.com/index.php?${params.toString()}`
+  let data: GelbooruResponse
+  try {
+    data = await fetchJson<GelbooruResponse>(url, {
       provider: 'gelbooru',
       signal: args.signal,
       proxyUrl: args.proxyUrl,
       needsProxy: true,
-    },
-  )
+    })
+  } catch (e) {
+    if (e instanceof HttpError) {
+      // El mensaje real de Gelbooru ("invalid key") llega en el cuerpo, no en el status.
+      const raw = await fetch(url, { method: 'GET', signal: args.signal }).then((r) => r.text())
+      if (/invalid key|unauthorized/i.test(raw)) {
+        throw new AuthRequiredError('gelbooru', 'Gelbooru necesita una API key y un User ID gratuitos')
+      }
+    }
+    throw e
+  }
 
   const posts = Array.isArray(data)
     ? data

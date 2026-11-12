@@ -16,10 +16,22 @@ const THEME_COLOR = {
   contrast: '#000000',
 } as const
 
+function initialQuality(): Settings['quality'] {
+  try {
+    // En el móvil, Óptimo es el punto de partida: 12 tarjetas, sin
+    // animaciones y con las siguientes a un toque.
+    return window.matchMedia('(max-width: 720px)').matches ? 'optimo' : DEFAULT_SETTINGS.quality
+  } catch {
+    return DEFAULT_SETTINGS.quality
+  }
+}
+
 function loadSettings(): Settings {
+  const base: Settings = { ...DEFAULT_SETTINGS, quality: initialQuality() }
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return DEFAULT_SETTINGS
+    if (!raw) return base
     const parsed = JSON.parse(raw) as Partial<Settings>
     const providers = defaultProviders()
 
@@ -31,14 +43,14 @@ function loadSettings(): Settings {
     if (!nsfw.unlocked) nsfw.enabled = false
 
     return {
-      ...DEFAULT_SETTINGS,
+      ...base,
       ...parsed,
       blacklist: { ...DEFAULT_SETTINGS.blacklist, ...(parsed.blacklist ?? {}) },
       nsfw,
       providers,
     }
   } catch {
-    return DEFAULT_SETTINGS
+    return base
   }
 }
 

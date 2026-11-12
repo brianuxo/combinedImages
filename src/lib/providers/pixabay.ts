@@ -40,7 +40,7 @@ function normalize(hit: PixabayHit, args: SearchArgs): ImageItem {
     id: String(hit.id),
     provider: 'pixabay',
     providerLabel: 'Pixabay',
-    thumb: hit.previewURL || hit.webformatURL,
+    thumb: hit.webformatURL || hit.previewURL,
     preview,
     full,
     width: hit.imageWidth,

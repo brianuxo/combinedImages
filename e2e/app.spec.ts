@@ -61,6 +61,32 @@ test.describe('flujo NSFW', () => {
     await expect(page.getByRole('tab', { name: /Gelbooru/ })).toHaveCount(0)
   })
 
+  test('un doble toque en la versión muestra y vuelve a ocultar el interruptor', async ({
+    page,
+  }) => {
+    await page.goto('/')
+    await page.evaluate((key) => localStorage.removeItem(key as string), STORAGE_KEY)
+    await page.reload({ waitUntil: 'networkidle' })
+
+    // En móvil no hay teclado para pulsar F: el acceso es un doble toque.
+    await expect(page.getByText('NSFW', { exact: true })).toHaveCount(0)
+
+    // El primer toque arma el gesto y explica que falta el segundo.
+    await page.locator('.version-tap').click()
+    await expect(page.locator('.version-hint')).toBeVisible()
+
+    await page.locator('.version-tap').click()
+    await expect(page.getByRole('switch', { name: 'Incluir contenido NSFW' })).toBeVisible()
+    await expect(page.locator('#nsfw-section')).toContainText('desbloqueado')
+
+    // Otro doble toque sobre la versión de Ajustes lo vuelve a ocultar.
+    await page.locator('.version-button').click()
+    await page.locator('.version-button').click()
+    await page.getByRole('button', { name: 'Abrir ajustes' }).click()
+    await expect(page.locator('#nsfw-section')).toHaveCount(0)
+    await expect(page.getByText('NSFW', { exact: true })).toHaveCount(0)
+  })
+
   test('activar el interruptor muestra el aviso y las fuentes adultas', async ({ page }) => {
     await page.goto('/')
     await page.evaluate((key) => localStorage.removeItem(key as string), STORAGE_KEY)

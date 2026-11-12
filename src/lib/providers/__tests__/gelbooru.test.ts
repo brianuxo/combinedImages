@@ -107,7 +107,8 @@ describe('searchGelbooru', () => {
     expect(item.width).toBe(1920)
 
     const decode = (value: string) => decodeURIComponent(value.replace('/media?url=', ''))
-    expect(decode(item.thumb)).toBe(POST.preview_url)
+    // La rejilla usa el tamaño medio para que no se vea borrosa en el móvil.
+    expect(decode(item.thumb)).toBe(POST.sample_url)
     expect(decode(item.preview)).toBe(POST.sample_url)
     expect(decode(item.full)).toBe(POST.file_url)
   })

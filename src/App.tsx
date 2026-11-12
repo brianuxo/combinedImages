@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { RightDrawer, type DrawerTab } from './components/layout/RightDrawer'
-import { TopBar } from './components/layout/TopBar'
+import { FavoritesView } from './components/favorites/FavoritesView'
 import { Gallery } from './components/gallery/Gallery'
 import { Home } from './components/home/Home'
+import { RightDrawer, type DrawerTab } from './components/layout/RightDrawer'
+import { TopBar } from './components/layout/TopBar'
 import { NsfwNotice } from './components/settings/NsfwNotice'
+import { useFavorites } from './context/favorites'
 import { useSettings } from './context/settings'
 import { useToast } from './context/toast'
 import { PROVIDER_MAP } from './data/providers'
+import { authorQuery } from './lib/suggestions'
 import { isProviderVisible } from './lib/visibility'
 import type { ProviderId } from './types'
 
-type View = { name: 'home' } | { name: 'gallery'; provider: ProviderId }
+type View =
+  | { name: 'home' }
+  | { name: 'gallery'; provider: ProviderId; query?: string; author?: string }
+  | { name: 'favorites' }
 
 export default function App() {
   const { settings, unlockNsfw, lockNsfw, nsfwNoticeOpen, closeNsfwNotice } = useSettings()
+  const { count: favoritesCount } = useFavorites()
   const { push } = useToast()
   const [view, setView] = useState<View>({ name: 'home' })
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -22,12 +29,23 @@ export default function App() {
 
   const duration = settings.quality === 'optimo' ? 0.16 : 0.3
 
-  const openProvider = useCallback((provider: ProviderId) => {
-    setView({ name: 'gallery', provider })
+  const openProvider = useCallback((provider: ProviderId, query?: string) => {
+    setView({ name: 'gallery', provider, query })
+    window.scrollTo({ top: 0 })
+  }, [])
+
+  // El autor se busca como un tag en los booru (`sora_(arknights)`), así que
+  // la conversión la hace el mismo módulo que usan los filtros.
+  const openAuthor = useCallback((provider: ProviderId, author: string) => {
+    setView({ name: 'gallery', provider, query: authorQuery(author, provider), author })
     window.scrollTo({ top: 0 })
   }, [])
 
   const goHome = useCallback(() => setView({ name: 'home' }), [])
+  const openFavorites = useCallback(() => {
+    setView({ name: 'favorites' })
+    window.scrollTo({ top: 0 })
+  }, [])
 
   const openDrawer = useCallback((tab: DrawerTab = 'settings') => {
     setDrawerTab(tab)
@@ -83,14 +101,17 @@ export default function App() {
 
       <TopBar
         active={view.name === 'gallery' ? view.provider : null}
+        favoritesActive={view.name === 'favorites'}
+        favoritesCount={favoritesCount}
         onSelect={openProvider}
         onHome={goHome}
+        onFavorites={openFavorites}
         onToggleNsfw={toggleNsfw}
         onOpenDrawer={() => openDrawer('settings')}
       />
 
       <AnimatePresence mode="wait" initial={false}>
-        {view.name === 'home' ? (
+        {view.name === 'home' && (
           <motion.main
             key="home"
             className="page"
@@ -99,11 +120,13 @@ export default function App() {
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration, ease: [0.22, 1, 0.36, 1] }}
           >
-            <Home onOpen={openProvider} />
+            <Home onOpen={openProvider} onToggleNsfw={toggleNsfw} />
           </motion.main>
-        ) : (
+        )}
+
+        {view.name === 'gallery' && (
           <motion.main
-            key={view.provider}
+            key={`${view.provider}:${view.query ?? ''}:${view.author ?? ''}`}
             className="page"
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
@@ -112,8 +135,28 @@ export default function App() {
           >
             <Gallery
               provider={view.provider}
+              initialQuery={view.query}
+              initialAuthor={view.author}
               onBack={goHome}
               onOpenSettings={() => openDrawer('settings')}
+            />
+          </motion.main>
+        )}
+
+        {view.name === 'favorites' && (
+          <motion.main
+            key="favorites"
+            className="page"
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <FavoritesView
+              onBack={goHome}
+              onExplore={goHome}
+              onSearch={openProvider}
+              onAuthor={openAuthor}
             />
           </motion.main>
         )}
@@ -124,6 +167,7 @@ export default function App() {
         tab={drawerTab}
         onTab={setDrawerTab}
         onClose={() => setDrawerOpen(false)}
+        onToggleNsfw={toggleNsfw}
       />
 
       <NsfwNotice open={nsfwNoticeOpen} onClose={closeNsfwNotice} />

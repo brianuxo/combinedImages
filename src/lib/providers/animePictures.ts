@@ -45,13 +45,12 @@ export async function searchAnimePictures(args: SearchArgs): Promise<SearchRespo
       id: String(post.id),
       provider: 'anime-pictures',
       providerLabel: 'Anime-Pictures',
-      thumb: previewUrl(post.md5, 'sp'),
+      // `cp` es el tamaño medio; con `sp` la tarjeta se veía borrosa.
+      thumb: previewUrl(post.md5, 'cp'),
       preview:
         args.quality === 'max'
           ? previewUrl(post.md5, 'bp')
-          : args.quality === 'general'
-            ? previewUrl(post.md5, 'cp')
-            : previewUrl(post.md5, 'sp'),
+          : previewUrl(post.md5, 'cp'),
       full: previewUrl(post.md5, 'bp'),
       width: post.width,
       height: post.height,

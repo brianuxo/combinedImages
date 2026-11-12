@@ -245,6 +245,46 @@
   border-radius: 10px;
 }
 
+.icon-btn.is-active {
+  color: #ffd7e3;
+  background: color-mix(in srgb, #fb7185 18%, transparent);
+  border-color: color-mix(in srgb, #fb7185 40%, transparent);
+}
+
+/* Instalar la app: solo aparece cuando el navegador ofrece el aviso. */
+.install-btn {
+  color: #ded9ff;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+}
+
+.install-btn:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 52%, transparent);
+}
+
+/* El contador de favoritos se apoya en la esquina del botón. */
+.fav-btn {
+  position: relative;
+}
+
+.count-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 18px;
+  padding: 2px 5px;
+  border: 2px solid var(--bg);
+  border-radius: 999px;
+  color: #fff;
+  background: #fb7185;
+  font-size: 0.63rem;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+  text-align: center;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -397,6 +437,11 @@ kbd {
   display: grid;
   gap: 8px;
   margin-top: 14px;
+}
+
+/* Ancla del desplegable de sugerencias de los filtros. */
+.chip-input-wrap {
+  position: relative;
 }
 
 .chip-input {
@@ -570,6 +615,42 @@ kbd {
   animation: float 2.8s ease-in-out infinite;
 }
 
+.hero-install {
+  display: flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  margin: 26px auto 0;
+  padding: 9px 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--elev);
+  font-size: 0.83rem;
+  font-weight: 550;
+  transition:
+    background var(--dur-1),
+    border-color var(--dur-1),
+    transform var(--dur-1) var(--ease);
+}
+
+.hero-install svg {
+  color: var(--accent);
+}
+
+.hero-install:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.hero-install:active {
+  transform: scale(0.98);
+}
+
+.hero-install + .scroll-hint {
+  margin-top: 20px;
+}
+
 @keyframes float {
   50% {
     transform: translateY(4px);
@@ -729,6 +810,31 @@ kbd {
   text-transform: uppercase;
 }
 
+/* En Óptimo el inicio también se compacta: menos relleno y sin texto
+   secundario. Es el "modo mini" en cualquier pantalla. */
+[data-quality='optimo'] .provider-grid {
+  gap: 11px;
+}
+
+[data-quality='optimo'] .provider-card {
+  min-height: 0;
+  padding: 14px 15px;
+}
+
+[data-quality='optimo'] .pc-tagline,
+[data-quality='optimo'] .pc-tags {
+  display: none;
+}
+
+[data-quality='optimo'] .pc-name {
+  margin-top: 10px;
+  font-size: 0.98rem;
+}
+
+[data-quality='optimo'] .pc-foot {
+  padding-top: 10px;
+}
+
 .home-footer {
   display: grid;
   gap: 6px;
@@ -738,6 +844,41 @@ kbd {
   font-size: 0.76rem;
   line-height: 1.6;
   text-align: center;
+}
+
+/* La versión del pie es el acceso a las opciones ocultas en táctil: con dos
+   toques se muestra u oculta el contenido adulto (no hay teclado en móvil). */
+.version-tap {
+  justify-self: center;
+  padding: 3px 8px;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.version-tap:hover {
+  color: var(--muted);
+  background: color-mix(in srgb, var(--faint) 12%, transparent);
+}
+
+.version-tap:active {
+  color: var(--muted);
+}
+
+.version-tap.is-armed,
+.version-button.is-armed {
+  color: var(--warn);
+}
+
+.version-hint {
+  justify-self: center;
+  color: var(--warn);
+  font-size: 0.72rem;
+  opacity: 0.85;
 }
 
 /* ==========================================================================
@@ -782,11 +923,17 @@ kbd {
   font-size: 0.83rem;
 }
 
+/* Ancla del desplegable de sugerencias del buscador. */
+.search-wrap {
+  position: relative;
+  width: min(460px, 100%);
+}
+
 .searchbar {
   display: flex;
   align-items: center;
   gap: 8px;
-  width: min(460px, 100%);
+  width: 100%;
   padding: 6px 6px 6px 14px;
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -839,6 +986,84 @@ kbd {
   border-radius: 10px;
 }
 
+/* Sugerencias de tags
+ *
+ * Lo usan el buscador y los campos de filtros. El contenedor padre
+ * (`.search-wrap`, `.chip-input-wrap`) tiene que ser `position: relative`.
+ */
+
+.suggest {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  left: 0;
+  z-index: 40;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--panel-solid);
+  box-shadow: var(--shadow-lg);
+}
+
+[data-quality='optimo'] .suggest {
+  box-shadow: 0 18px 40px -24px #000;
+}
+
+.suggest ul {
+  display: grid;
+  max-height: min(320px, 56vh);
+  padding: 6px;
+  overflow-y: auto;
+}
+
+.suggest-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition:
+    color var(--dur-1),
+    background var(--dur-1);
+}
+
+.suggest-item.is-active {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.suggest-item mark {
+  color: var(--text);
+  background: none;
+  font-weight: 640;
+}
+
+.suggest-enter {
+  flex: none;
+  opacity: 0;
+  transition: opacity var(--dur-1);
+}
+
+.suggest-item.is-active .suggest-enter {
+  opacity: 0.55;
+}
+
+.suggest-hint {
+  padding: 7px 12px 9px;
+  border-top: 1px solid var(--line);
+  color: var(--faint);
+  font-size: 0.7rem;
+}
+
+.suggest-hint kbd {
+  padding: 0 4px;
+  font-size: 0.68rem;
+}
+
 .gallery-meta {
   display: flex;
   flex-wrap: wrap;
@@ -873,6 +1098,16 @@ kbd {
   cursor: pointer;
 }
 
+.meta-chip-accent {
+  color: #dfe2ff;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.meta-chip-accent:hover {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+}
+
 .inline-notice {
   display: flex;
   align-items: center;
@@ -892,19 +1127,30 @@ kbd {
   flex: none;
 }
 
-/* Masonry */
+/* Masonry
+ *
+ * Las columnas se reparten en React (`useMasonry`) y no con `columns` de
+ * CSS: al añadir contenido, el navegador reequilibraba las columnas y
+ * movía las tarjetas que ya estaban en pantalla. Con columnas flex, la
+ * rejilla solo crece hacia abajo.
+ */
 
 .masonry {
-  columns: 4 170px;
-  column-gap: 14px;
+  display: flex;
+  align-items: flex-start;
+}
+
+.masonry-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .img-card {
   position: relative;
   width: 100%;
-  margin-bottom: 14px;
   overflow: hidden;
-  break-inside: avoid;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--bg-2);
@@ -942,6 +1188,15 @@ kbd {
 .img-wrap img.is-loaded,
 .img-wrap img[src] {
   opacity: 1;
+}
+
+/* Panorámicas y tiras verticales: se ven completas, con bandas del fondo. */
+.img-wrap.is-contain {
+  background: var(--bg-2);
+}
+
+.img-wrap.is-contain img {
+  object-fit: contain;
 }
 
 .img-card:hover .img-wrap img {
@@ -1056,6 +1311,16 @@ kbd {
   background: rgba(8, 9, 14, 0.85);
 }
 
+.img-action.is-fav {
+  color: #ffd0dc;
+  background: rgba(190, 24, 93, 0.55);
+  border-color: rgba(251, 113, 133, 0.55);
+}
+
+.img-action.is-fav:hover {
+  background: rgba(190, 24, 93, 0.72);
+}
+
 .img-nsfw {
   position: absolute;
   top: 10px;
@@ -1072,9 +1337,6 @@ kbd {
 
 .skeleton {
   position: relative;
-  margin-bottom: 14px;
-  break-inside: avoid;
-  aspect-ratio: 3 / 4;
   border-radius: 14px;
   background: linear-gradient(
     100deg,
@@ -1086,20 +1348,34 @@ kbd {
   animation: shimmer 1.5s linear infinite;
 }
 
-.skeleton:nth-child(3n) {
-  aspect-ratio: 4 / 5;
-}
-
-.skeleton:nth-child(4n) {
-  aspect-ratio: 1 / 1;
-}
-
-.skeleton:nth-child(5n) {
-  aspect-ratio: 16 / 10;
-}
-
 .sentinel {
   height: 1px;
+}
+
+.load-more-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px auto 0;
+  padding: 11px 24px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: var(--elev);
+  font-size: 0.86rem;
+  font-weight: 560;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-2),
+    background var(--dur-2),
+    transform var(--dur-2) var(--ease);
+}
+
+.load-more-btn:hover {
+  border-color: var(--line-strong);
+  background: var(--panel);
+  transform: translateY(-1px);
 }
 
 .load-more {
@@ -1388,6 +1664,34 @@ kbd {
   text-align: right;
 }
 
+/* Autor clicable: busca el resto de imágenes con ese nombre. */
+.lb-author {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 550;
+  text-align: right;
+  transition: color var(--dur-1);
+}
+
+.lb-author svg {
+  color: var(--faint);
+  transition:
+    color var(--dur-1),
+    transform var(--dur-1) var(--ease);
+}
+
+.lb-author:hover {
+  color: color-mix(in srgb, var(--accent) 74%, white 26%);
+}
+
+.lb-author:hover svg {
+  color: var(--accent);
+  transform: translate(1px, -1px);
+}
+
 .lb-tags {
   display: flex;
   flex-wrap: wrap;
@@ -1402,6 +1706,93 @@ kbd {
 
 .lb-hint {
   margin-top: -6px;
+}
+
+.lb-actions-row {
+  display: flex;
+  gap: 8px;
+}
+
+.lb-actions-row .btn {
+  flex: 1;
+}
+
+.btn-saved {
+  color: #ffd7e3;
+  background: color-mix(in srgb, #fb7185 16%, transparent);
+  border-color: color-mix(in srgb, #fb7185 42%, transparent);
+}
+
+.btn-saved:hover {
+  background: color-mix(in srgb, #fb7185 24%, transparent);
+}
+
+/* ==========================================================================
+   Favoritos
+   ========================================================================== */
+
+.fav-badge {
+  color: #ffe4ec;
+  background: linear-gradient(140deg, #fb7185, #be185d);
+}
+
+.fav-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.zip-job {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+[data-quality='optimo'] .zip-job {
+  background: var(--panel-solid);
+}
+
+.zip-job-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.zip-job-head span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 550;
+}
+
+.zip-job .hint {
+  margin: 0;
+}
+
+.zip-bar {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.zip-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent), #fb7185);
+  transition: width var(--dur-2) var(--ease);
+}
+
+.favorites .end-note {
+  margin-top: 28px;
 }
 
 /* ==========================================================================
@@ -1754,6 +2145,50 @@ kbd {
   font-size: 0.85rem;
 }
 
+/* Sincronización --------------------------- */
+
+.sync-state {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.sync-state.is-idle {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.sync-state.is-error,
+.sync-state.is-offline {
+  color: var(--warn, #f0b429);
+  border-color: color-mix(in srgb, #f0b429 45%, transparent);
+}
+
+.sync-error {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, #f0b429 45%, transparent);
+  border-radius: 12px;
+  color: var(--text);
+  background: color-mix(in srgb, #f0b429 12%, transparent);
+  font-size: 0.8rem;
+}
+
+.sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 12px;
+}
+
 .about-row:last-of-type {
   border-bottom: none;
 }
@@ -1762,6 +2197,7 @@ kbd {
   color: var(--faint);
   font-size: 0.83rem;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .version-button:hover {
@@ -2154,8 +2590,8 @@ kbd {
 @media (max-width: 720px) {
   .topbar-inner {
     flex-wrap: wrap;
-    gap: 8px;
-    padding-bottom: 4px;
+    gap: 6px;
+    padding-bottom: 2px;
   }
 
   .brand {
@@ -2167,25 +2603,94 @@ kbd {
     margin-left: auto;
   }
 
+  /* Los dos botones (favoritos y ajustes) van juntos a la derecha. */
+  .topbar-inner > .icon-btn + .icon-btn {
+    margin-left: 0;
+  }
+
   .strip-wrap {
     order: 3;
     flex-basis: 100%;
   }
 
+  .strip {
+    gap: 5px;
+  }
+
+  .pill {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+  }
+
+  /* Héroe compacto: el inicio ya no ocupa una pantalla entera. */
   .hero {
-    padding-top: 34px;
+    padding: 18px 0 24px;
   }
 
   .hero h1 {
-    font-size: clamp(2.1rem, 10.5vw, 3rem);
+    margin-top: 14px;
+    font-size: clamp(1.8rem, 8.6vw, 2.4rem);
   }
 
+  .hero-sub,
+  .hero-stats {
+    display: none;
+  }
+
+  .eyebrow {
+    padding: 5px 11px;
+    font-size: 0.72rem;
+  }
+
+  .scroll-hint {
+    margin-top: 14px;
+  }
+
+  /* Fuentes en dos columnas compactas: icono, nombre y estado. */
   .provider-grid {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .provider-card {
-    flex-basis: 100%;
+    flex: initial;
+    min-height: 0;
+    padding: 13px 14px;
+    border-radius: 16px;
+  }
+
+  .provider-card::before {
+    display: none;
+  }
+
+  .pc-tagline,
+  .pc-tags,
+  .pc-flag {
+    display: none;
+  }
+
+  .pc-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .pc-name {
+    margin-top: 10px;
+    font-size: 0.95rem;
+  }
+
+  .pc-foot {
+    padding-top: 9px;
+  }
+
+  .pc-status {
+    font-size: 0.66rem;
+  }
+
+  .page {
+    padding-bottom: 48px;
   }
 
   .gallery-title {
@@ -2196,15 +2701,44 @@ kbd {
     width: 100%;
   }
 
-  .masonry {
-    columns: 2 140px;
-    column-gap: 10px;
+  .search-wrap {
+    width: 100%;
+  }
+
+  /* Metadatos en una sola fila deslizable, no en tres líneas. */
+  .gallery-meta {
+    flex-wrap: nowrap;
+    margin-right: -14px;
+    padding-right: 14px;
+    padding-bottom: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .gallery-meta::-webkit-scrollbar {
+    display: none;
+  }
+
+  .meta-chip {
+    flex: none;
+  }
+
+  .fav-actions {
+    width: 100%;
+  }
+
+  .fav-actions .btn {
+    flex: 1;
   }
 
   .img-card,
   .skeleton {
-    margin-bottom: 10px;
     border-radius: 12px;
+  }
+
+  /* En el móvil el tamaño en píxeles solo estorba. */
+  .img-size {
+    display: none;
   }
 
   .drawer {
@@ -2245,12 +2779,21 @@ kbd {
     padding-left: 12px;
   }
 
-  .img-size {
-    display: none;
+  /* El margen negativo de la fila de chips debe seguir al padding real. */
+  .gallery-meta {
+    margin-right: -12px;
+  }
+
+  .hero h1 {
+    font-size: 1.72rem;
   }
 
   .img-tags span:nth-child(3) {
     display: none;
+  }
+
+  .sync-actions .btn {
+    flex: 1;
   }
 }
 

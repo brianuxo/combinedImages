@@ -16,6 +16,10 @@ dist-ssr
 .env
 .env.*
 !.env.example
+.despliegue.local
+
+# Datos de la instancia (token y paquete de sincronización)
+data/
 
 # Playwright
 test-results

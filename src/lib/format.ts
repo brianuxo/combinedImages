@@ -1,7 +1,11 @@
-export const QUALITY_PAGE_SIZE = {
-  max: 36,
-  general: 28,
-  optimo: 18,
+export const QUALITY_LIMITS = {
+  max: { perPage: 36, autoCap: Number.POSITIVE_INFINITY, step: 36, skeletons: 12 },
+  general: { perPage: 28, autoCap: Number.POSITIVE_INFINITY, step: 28, skeletons: 12 },
+  /**
+   * Modo mini: la primera página se queda en 12 tarjetas y el resto se pide
+   * a mano. En un móvil la diferencia de datos y de scroll es enorme.
+   */
+  optimo: { perPage: 12, autoCap: 12, step: 12, skeletons: 6 },
 } as const
 
 export function formatCount(value: number): string {

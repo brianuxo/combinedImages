@@ -1,21 +1,26 @@
-import { useRef } from 'react'
 import { motion } from 'motion/react'
 import { RotateCcw } from 'lucide-react'
 import { useSettings } from '../../context/settings'
+import { useSync } from '../../context/sync'
 import { useToast } from '../../context/toast'
 import { PROVIDERS, PROVIDER_MAP } from '../../data/providers'
+import { useVersionTap } from '../../hooks/useVersionTap'
 import { probeProviderKey } from '../../lib/providers/probe'
 import { isProviderInSettings, isProviderVisible } from '../../lib/visibility'
 import type { ProviderId } from '../../types'
 import { ApiKeyField } from './ApiKeyField'
 import { ChipInput } from '../ui/ChipInput'
 import { ProviderIcon } from '../ui/ProviderIcon'
+import { SyncPanel } from './SyncPanel'
 import { Toggle } from '../ui/Toggle'
 
-export function SettingsPanel() {
-  const { settings, update, updateProvider, unlockNsfw, enableNsfw, reset } = useSettings()
+export function SettingsPanel({ onToggleNsfw }: { onToggleNsfw: () => void }) {
+  const { settings, update, updateProvider, enableNsfw, reset } = useSettings()
+  const sync = useSync()
   const { push } = useToast()
-  const versionClicks = useRef(0)
+
+  // Doble toque sobre la versión: en el móvil no hay teclado para pulsar F.
+  const { onTap: onVersionTap, armed, action } = useVersionTap(onToggleNsfw)
 
   const settingsProviders = PROVIDERS.filter((provider) =>
     isProviderInSettings(provider, settings),
@@ -23,16 +28,6 @@ export function SettingsPanel() {
   const visibleCount = PROVIDERS.filter((provider) =>
     isProviderVisible(provider, settings),
   ).length
-
-  const handleVersion = () => {
-    if (settings.nsfw.unlocked) return
-    versionClicks.current += 1
-    if (versionClicks.current >= 5) {
-      versionClicks.current = 0
-      unlockNsfw()
-      push('Opciones de contenido adulto visibles', 'warn')
-    }
-  }
 
   const testKey = async (provider: ProviderId) => {
     const current = settings.providers[provider]
@@ -109,8 +104,8 @@ export function SettingsPanel() {
         <h3>Claves API</h3>
         <p className="section-sub">
           {settings.nsfw.unlocked
-            ? 'Pixabay, Gelbooru y Rule34 necesitan clave. Wallhaven y Openverse la aceptan de forma opcional. Todo se guarda únicamente en este navegador.'
-            : 'Pixabay necesita clave. Wallhaven y Openverse la aceptan de forma opcional. Todo se guarda únicamente en este navegador.'}
+            ? 'Pixabay, Gelbooru y Rule34 necesitan clave. Wallhaven y Openverse la aceptan de forma opcional. Con la sincronización activa, las claves viajan cifradas a la instancia.'
+            : 'Pixabay necesita clave. Wallhaven y Openverse la aceptan de forma opcional. Con la sincronización activa, las claves viajan cifradas a la instancia.'}
         </p>
 
         <ApiKeyField
@@ -260,27 +255,39 @@ export function SettingsPanel() {
           </div>
           <p className="hint">
             Al activarlo aparecen en la barra de fuentes y en el inicio las pestañas de Gelbooru y
-            Rule34. La preferencia queda guardada en este navegador, así que no hay que repetirla.
-            Wallhaven necesita su API key para devolver NSFW. Las fuentes seguras (Safebooru,
-            Openverse, Wikimedia, Pixabay) no cambian.
+            Rule34. La preferencia se guarda en este dispositivo y, con la sincronización activa,
+            también en la instancia. Wallhaven necesita su API key para devolver NSFW. Las fuentes
+            seguras (Safebooru, Openverse, Wikimedia, Pixabay) no cambian.
           </p>
           <p className="hint">
-            <kbd>F</kbd> oculta esta sección y desactiva el contenido adulto.
+            <kbd>F</kbd> o un doble toque sobre la versión ocultan esta sección y desactivan el
+            contenido adulto.
           </p>
         </motion.section>
       )}
+
+      <SyncPanel />
 
       <section className="panel-section">
         <h3>Acerca de</h3>
         <div className="about-row">
           <span>Versión</span>
-          <button type="button" className="version-button" onClick={handleVersion}>
+          <button
+            type="button"
+            className={`version-button${armed ? ' is-armed' : ''}`}
+            onClick={onVersionTap}
+          >
             v1.0.0
           </button>
         </div>
+        {armed && (
+          <p className="hint version-hint">Toca otra vez la versión para {action} el contenido adulto</p>
+        )}
         <div className="about-row">
           <span>Datos</span>
-          <span className="hint">solo en tu navegador</span>
+          <span className="hint">
+            {sync.enabled ? 'instancia + caché local' : 'solo en este navegador'}
+          </span>
         </div>
         {settings.nsfw.unlocked && (
           <div className="about-row">

@@ -1,6 +1,6 @@
 import { Check, Feather, Gauge, Sparkles } from 'lucide-react'
 import { useSettings } from '../../context/settings'
-import { QUALITY_PAGE_SIZE } from '../../lib/format'
+import { QUALITY_LIMITS } from '../../lib/format'
 import type { Quality } from '../../types'
 
 const QUALITIES: {
@@ -24,7 +24,7 @@ const QUALITIES: {
   {
     id: 'optimo',
     name: 'Óptimo',
-    description: 'Miniaturas ligeras, sin desenfoques y con transiciones mínimas. Ideal para datos móviles.',
+    description: 'Modo mini: 12 imágenes por página, sin animaciones y con las siguientes a mano. Ideal para datos móviles.',
     icon: Feather,
   },
 ]
@@ -58,7 +58,12 @@ export function QualityPanel() {
                 <span className="q-body">
                   <strong>{quality.name}</strong>
                   <small>{quality.description}</small>
-                  <em>{QUALITY_PAGE_SIZE[quality.id]} por página</em>
+                  <em>
+                    {QUALITY_LIMITS[quality.id].perPage} por página
+                    {Number.isFinite(QUALITY_LIMITS[quality.id].autoCap)
+                      ? ` · tope ${QUALITY_LIMITS[quality.id].autoCap}`
+                      : ''}
+                  </em>
                 </span>
                 <span className="q-radio">{active && <Check size={14} />}</span>
               </button>
@@ -70,7 +75,8 @@ export function QualityPanel() {
       <section className="panel-section">
         <p className="hint">
           La calidad afecta a las vistas previas, al número de resultados por página y a la
-          intensidad de las animaciones. La descarga siempre guarda el archivo original
+          intensidad de las animaciones. En Óptimo la galería se detiene a las 12 imágenes y
+          el resto se pide con «Ver más». La descarga siempre guarda el archivo original
           disponible en la fuente.
         </p>
       </section>

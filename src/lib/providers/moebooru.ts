@@ -32,7 +32,8 @@ function normalize(
 ): ImageItem {
   const full = post.file_url || post.jpeg_url || post.sample_url || post.preview_url || ''
   const sample = post.sample_url || post.jpeg_url || post.file_url || post.preview_url || ''
-  const thumb = post.preview_url || sample
+  // La rejilla usa el tamaño medio: el preview (~150 px) se veía borroso.
+  const thumb = post.sample_url || post.preview_url || sample
 
   const preview =
     args.quality === 'max'
@@ -59,6 +60,10 @@ function normalize(
     sourceUrl: post.source?.startsWith('http') ? post.source : undefined,
     rating: RATING[post.rating] ?? 'safe',
     ext: post.file_ext,
+    // Sin referer el CDN sirve la imagen; con el de otra web, Yande.re la
+    // redirige al post (probado contra files.yande.re). Así la galería la
+    // carga directamente del CDN y no por el servidor.
+    noReferrer: true,
   }
 }
 

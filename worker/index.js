@@ -7,33 +7,30 @@
  * Sirve tanto para el JSON de las APIs sin CORS como para las imágenes de
  * Gelbooru y Rule34, que bloquean el hotlink según el referer.
  */
-const ALLOWED_HOSTS = new Set([
+// Hosts de los que se puede pedir el JSON de la API.
+const API_HOSTS = new Set([
   'konachan.com',
   'yande.re',
   'api.anime-pictures.net',
   'gelbooru.com',
   'wallhaven.cc',
   'api.rule34.xxx',
-  'img1.gelbooru.com',
-  'img2.gelbooru.com',
-  'img3.gelbooru.com',
-  'img4.gelbooru.com',
-  'img5.gelbooru.com',
-  'us.rule34.xxx',
-  'rule34.xxx',
-  'cdn.rule34.xxx',
 ])
 
-const MEDIA_HOSTS = new Set([
-  'img1.gelbooru.com',
-  'img2.gelbooru.com',
-  'img3.gelbooru.com',
-  'img4.gelbooru.com',
-  'img5.gelbooru.com',
-  'us.rule34.xxx',
-  'rule34.xxx',
-  'cdn.rule34.xxx',
-])
+// CDN de Gelbooru y Rule34. Cambian de host sin avisar (img1..img5, us,
+// api-cdn-us, api-cdn, cdn...), así que se acepta cualquier subdominio de
+// sus dominios: una lista cerrada se queda obsoleta y rompe las imágenes.
+//
+// Ojo: la misma regla está copiada en `vite.config.ts` (el worker se
+// despliega tal cual, sin compilar, así que no puede importar de `src/`).
+// Si se cambia una, hay que cambiar la otra.
+const MEDIA_HOSTS = new Set(['gelbooru.com', 'rule34.xxx'])
+const MEDIA_HOST_SUFFIXES = ['.gelbooru.com', '.rule34.xxx', '.yande.re']
+
+function isMediaHost(hostname) {
+  if (MEDIA_HOSTS.has(hostname)) return true
+  return MEDIA_HOST_SUFFIXES.some((suffix) => hostname.endsWith(suffix))
+}
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -51,6 +48,8 @@ function json(body, status = 200) {
 function refererFor(hostname) {
   if (hostname.endsWith('gelbooru.com')) return 'https://gelbooru.com/'
   if (hostname.endsWith('rule34.xxx')) return 'https://rule34.xxx/'
+  // Yande.re no sirve la imagen si la petición no viene de su propia web.
+  if (hostname.endsWith('yande.re')) return 'https://yande.re/'
   return undefined
 }
 
@@ -74,11 +73,12 @@ export default {
       return json({ error: 'URL inválida' }, 400)
     }
 
-    if (url.protocol !== 'https:' || !ALLOWED_HOSTS.has(url.hostname)) {
+    const isMedia = !API_HOSTS.has(url.hostname) && isMediaHost(url.hostname)
+
+    if (url.protocol !== 'https:' || !(isMedia || API_HOSTS.has(url.hostname))) {
       return json({ error: 'Host no permitido' }, 403)
     }
 
-    const isMedia = MEDIA_HOSTS.has(url.hostname)
     const referer = refererFor(url.hostname)
 
     let upstream
