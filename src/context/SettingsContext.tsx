@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   DEFAULT_SETTINGS,
   SettingsContext,
@@ -7,8 +7,10 @@ import {
 } from './settings'
 import { PROVIDER_IDS } from '../data/providers'
 import type { ProviderId, ProviderSettings, Settings } from '../types'
+import { pullSettings, pushSettings, checkServer } from '../lib/dataApi'
 
 const STORAGE_KEY = 'combined.settings.v1'
+const PUSH_DELAY = 800
 
 const THEME_COLOR = {
   dark: '#07080b',
@@ -26,7 +28,7 @@ function initialQuality(): Settings['quality'] {
   }
 }
 
-function loadSettings(): Settings {
+function loadSettingsLocal(): Settings {
   const base: Settings = { ...DEFAULT_SETTINGS, quality: initialQuality() }
 
   try {
@@ -54,6 +56,28 @@ function loadSettings(): Settings {
   }
 }
 
+function mergeServerSettings(serverData: unknown): Settings | null {
+  if (!serverData || typeof serverData !== 'object') return null
+  const parsed = serverData as Partial<Settings>
+  const base: Settings = { ...DEFAULT_SETTINGS, quality: initialQuality() }
+  const providers = defaultProviders()
+
+  for (const id of PROVIDER_IDS) {
+    providers[id] = { hidden: false, ...(parsed.providers?.[id] ?? {}) }
+  }
+
+  const nsfw = { ...DEFAULT_SETTINGS.nsfw, ...(parsed.nsfw ?? {}) }
+  if (!nsfw.unlocked) nsfw.enabled = false
+
+  return {
+    ...base,
+    ...parsed,
+    blacklist: { ...DEFAULT_SETTINGS.blacklist, ...(parsed.blacklist ?? {}) },
+    nsfw,
+    providers,
+  }
+}
+
 function accentForeground(hex: string): string {
   const clean = hex.replace('#', '')
   if (clean.length !== 6) return '#090a0f'
@@ -65,9 +89,41 @@ function accentForeground(hex: string): string {
 }
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(loadSettings)
+  const [settings, setSettings] = useState<Settings>(loadSettingsLocal)
   const [nsfwNoticeOpen, setNsfwNoticeOpen] = useState(false)
+  const [serverAvailable, setServerAvailable] = useState(false)
+  const checkedRef = useRef(false)
+  const debounceRef = useRef<number | null>(null)
+  const pushingRef = useRef(false)
 
+  // Verificar si el servidor está disponible al montar
+  useEffect(() => {
+    if (checkedRef.current) return
+    checkedRef.current = true
+
+    checkServer().then((available) => {
+      setServerAvailable(available)
+      if (available) {
+        pullSettings()
+          .then((data) => {
+            const merged = mergeServerSettings(data)
+            if (merged) {
+              setSettings(merged)
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(merged))
+              } catch { /* ignorar */ }
+            }
+          })
+          .catch(() => {
+            setServerAvailable(false)
+          })
+      }
+    }).catch(() => {
+      setServerAvailable(false)
+    })
+  }, [])
+
+  // Guardar en localStorage como respaldo siempre
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
@@ -75,6 +131,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       // El almacenamiento puede estar lleno o bloqueado; la app sigue funcionando.
     }
   }, [settings])
+
+  // Subir al servidor con debounce cuando hay cambios
+  useEffect(() => {
+    if (!serverAvailable || pushingRef.current) return
+
+    if (debounceRef.current !== null) window.clearTimeout(debounceRef.current)
+    debounceRef.current = window.setTimeout(() => {
+      debounceRef.current = null
+      pushingRef.current = true
+      pushSettings(settings)
+        .then(() => {
+          pushingRef.current = false
+        })
+        .catch(() => {
+          pushingRef.current = false
+        })
+    }, PUSH_DELAY)
+  }, [settings, serverAvailable])
 
   useEffect(() => {
     const root = document.documentElement

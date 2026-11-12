@@ -1,5 +1,4 @@
 import react from '@vitejs/plugin-react'
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto'
 import {
   copyFileSync,
   existsSync,
@@ -182,33 +181,23 @@ function mediaProxy(): Plugin {
 }
 
 /*
- * Sincronización entre dispositivos.
+ * Almacén de datos locales.
  *
- * La instancia guarda un único paquete cifrado con los favoritos, las claves
- * y los ajustes. El navegador solo manda y recibe ese texto: no puede leer
- * las claves, porque la frase con la que se descifra nunca llega al servidor.
+ * La instancia guarda los favoritos y la configuración en archivos JSON
+ * dentro de `data/`. No se requiere frase de sincronización ni cifrado:
+ * cualquier navegador que acceda a la instancia puede leer y escribir.
  *
- * La conexión se autoriza con la propia frase: el cliente deriva de ella una
- * credencial (PBKDF2) y el servidor guarda solo su hash en `data/auth`. La
- * primera conexión reclama el hash; después, solo esa frase (o el token fijo
- * de `data/token`, por compatibilidad) puede leer y escribir.
+ * Los archivos están en `.gitignore` para que no se suban al repositorio.
+ * Cada dispositivo que usa la misma instancia comparte los mismos datos.
  *
- * El paquete lleva un número de revisión. Un PUT solo se aplica si parte de
- * la revisión que el cliente conoce; si otro dispositivo escribió antes, se
- * responde 409 con el estado actual y el cliente vuelve a mezclar.
- *
- * Vive aquí, en el mismo proceso que `vite preview`, para no añadir otro
- * servicio ni otro puerto. Los datos van a `data/` (fuera del despliegue).
+ * Endpoints:
+ *   GET  /api/data/favorites  → lee data/favorites.json
+ *   PUT  /api/data/favorites  → escribe data/favorites.json
+ *   GET  /api/data/settings   → lee data/settings.json
+ *   PUT  /api/data/settings   → escribe data/settings.json
+ *   GET  /api/data/health     → { ok: true }
  */
-const SYNC_BODY_LIMIT = 2_000_000
-
-interface SyncStore {
-  revision: number
-  updatedAt: number
-  blob: string
-}
-
-const EMPTY_SYNC: SyncStore = { revision: 0, updatedAt: 0, blob: '' }
+const DATA_BODY_LIMIT = 500_000
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
   response.statusCode = status
@@ -226,7 +215,7 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   await new Promise<void>((done, fail) => {
     request.on('data', (chunk: Buffer) => {
       size += chunk.byteLength
-      if (size > SYNC_BODY_LIMIT) {
+      if (size > DATA_BODY_LIMIT) {
         tooLarge = true
         return
       }
@@ -242,183 +231,115 @@ async function readJsonBody(request: IncomingMessage): Promise<unknown> {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
 
-function syncStore(): Plugin {
+function dataStore(): Plugin {
   let root = process.cwd()
-  let cachedToken: string | null = null
 
-  const dataDir = () => resolve(process.env.SYNC_DATA_DIR ?? join(root, 'data'))
-  const storeFile = () => join(dataDir(), 'sync.json')
+  const dataDir = () => resolve(process.env.DATA_DIR ?? join(root, 'data'))
 
-  // El token puede venir del entorno (systemd) o de `data/token`. Si no
-  // existe, se genera la primera vez y se guarda con permisos de propietario.
-  // Ya no se usa para conectar desde la app (eso lo hace la frase), pero se
-  // conserva por compatibilidad con dispositivos ya vinculados y para curl.
-  const token = (): string => {
-    if (cachedToken) return cachedToken
-
-    const fromEnv = (process.env.SYNC_TOKEN ?? '').trim()
-    if (fromEnv) {
-      cachedToken = fromEnv
-      return cachedToken
-    }
-
-    const file = join(dataDir(), 'token')
+  const safeRead = (fileName: string): unknown => {
     try {
-      const saved = readFileSync(file, 'utf8').trim()
-      if (saved) {
-        cachedToken = saved
-        return cachedToken
-      }
+      const file = join(dataDir(), fileName)
+      const raw = readFileSync(file, 'utf8')
+      return JSON.parse(raw)
     } catch {
-      // Todavía no hay token: se crea abajo.
-    }
-
-    cachedToken = randomBytes(24).toString('hex')
-    mkdirSync(dataDir(), { recursive: true, mode: 0o700 })
-    writeFileSync(file, `${cachedToken}\n`, { mode: 0o600 })
-    console.log(`[sync] Token creado en ${file}`)
-    return cachedToken
-  }
-
-  const readStore = (): SyncStore => {
-    try {
-      const parsed = JSON.parse(readFileSync(storeFile(), 'utf8')) as Partial<SyncStore>
-      if (typeof parsed.revision !== 'number' || typeof parsed.blob !== 'string') {
-        return { ...EMPTY_SYNC }
-      }
-      return {
-        revision: parsed.revision,
-        updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0,
-        blob: parsed.blob,
-      }
-    } catch {
-      return { ...EMPTY_SYNC }
+      return null
     }
   }
 
-  const writeStore = (store: SyncStore): void => {
+  const safeWrite = (fileName: string, data: unknown): void => {
     mkdirSync(dataDir(), { recursive: true, mode: 0o700 })
-    const file = storeFile()
+    const file = join(dataDir(), fileName)
     const tmp = `${file}.tmp`
 
     if (existsSync(file)) {
       try {
         copyFileSync(file, `${file}.bak`)
       } catch {
-        // Sin copia de seguridad se sigue: el archivo principal es el bueno.
+        // Sin copia de seguridad se sigue.
       }
     }
 
-    writeFileSync(tmp, JSON.stringify(store, null, 2), { mode: 0o600 })
+    writeFileSync(tmp, JSON.stringify(data, null, 2), { mode: 0o600 })
     renameSync(tmp, file)
   }
 
-  // Hash de la credencial derivada de la frase, en `data/auth`. Va en un
-  // archivo aparte para poder resetear el acceso sin tocar el paquete.
-  const authFile = () => join(dataDir(), 'auth')
-
-  const readAuthHash = (): string | null => {
-    try {
-      const saved = readFileSync(authFile(), 'utf8').trim()
-      return saved || null
-    } catch {
-      // Nadie ha reclamado la credencial todavía.
-      return null
-    }
-  }
-
-  const writeAuthHash = (hash: string): void => {
-    mkdirSync(dataDir(), { recursive: true, mode: 0o700 })
-    writeFileSync(authFile(), `${hash}\n`, { mode: 0o600 })
-  }
-
-  const sameValue = (left: string, right: string): boolean => {
-    const a = Buffer.from(left)
-    const b = Buffer.from(right)
-    return a.byteLength === b.byteLength && timingSafeEqual(a, b)
-  }
-
-  const hashBearer = (value: string): string =>
-    createHash('sha256').update(value, 'utf8').digest('hex')
-
-  // Autoriza con el token fijo o con la credencial derivada de la frase.
-  // Si nadie ha reclamado la credencial, la primera conexión la reclama.
-  const authorized = (request: IncomingMessage): boolean => {
-    const header = request.headers.authorization ?? ''
-    const match = /^Bearer\s+(.+)$/i.exec(header)
-    if (!match) return false
-
-    const given = match[1]
-    if (sameValue(given, token())) return true
-
-    const digest = hashBearer(given)
-    const saved = readAuthHash()
-    if (saved) return sameValue(digest, saved)
-
-    writeAuthHash(digest)
-    console.log('[sync] Credencial de frase reclamada en data/auth')
-    return true
-  }
-
   const handle = async (request: IncomingMessage, response: ServerResponse) => {
-    const path = new URL(request.url ?? '/', 'http://localhost').pathname
+    const url = new URL(request.url ?? '/', 'http://localhost')
+    const path = url.pathname
 
-    if (!authorized(request)) {
-      sendJson(response, 401, { error: 'no-autorizado' })
+    // CORS: permitir que la app se abra desde file:// o otro origen.
+    response.setHeader('Access-Control-Allow-Origin', '*')
+    response.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS')
+    response.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+    if (request.method === 'OPTIONS') {
+      response.statusCode = 204
+      response.end()
       return
     }
 
-    if (path === '/health' && request.method === 'GET') {
+    // Health check
+    if (path === '/data/health' && request.method === 'GET') {
       sendJson(response, 200, { ok: true })
       return
     }
 
-    if (path === '/sync' && request.method === 'GET') {
-      sendJson(response, 200, readStore())
-      return
+    // Favoritos
+    if (path === '/data/favorites') {
+      if (request.method === 'GET') {
+        const data = safeRead('favorites.json')
+        sendJson(response, 200, data ?? [])
+        return
+      }
+
+      if (request.method === 'PUT') {
+        let body: unknown
+        try {
+          body = await readJsonBody(request)
+        } catch (error) {
+          const tooLarge = error instanceof Error && error.message === 'payload-too-large'
+          sendJson(response, tooLarge ? 413 : 400, { error: tooLarge ? 'demasiado-grande' : 'json-invalido' })
+          return
+        }
+
+        if (!Array.isArray(body)) {
+          sendJson(response, 400, { error: 'se-espera-un-array' })
+          return
+        }
+
+        safeWrite('favorites.json', body)
+        sendJson(response, 200, { ok: true, count: body.length })
+        return
+      }
     }
 
-    if (path === '/sync' && request.method === 'PUT') {
-      let body: unknown
-      try {
-        body = await readJsonBody(request)
-      } catch (error) {
-        const tooLarge = error instanceof Error && error.message === 'payload-too-large'
-        sendJson(response, tooLarge ? 413 : 400, { error: tooLarge ? 'demasiado-grande' : 'json-invalido' })
+    // Settings
+    if (path === '/data/settings') {
+      if (request.method === 'GET') {
+        const data = safeRead('settings.json')
+        sendJson(response, 200, data ?? {})
         return
       }
 
-      const payload = body as { baseRevision?: unknown; blob?: unknown } | null
-      const baseRevision = payload?.baseRevision
-      const blob = payload?.blob
+      if (request.method === 'PUT') {
+        let body: unknown
+        try {
+          body = await readJsonBody(request)
+        } catch (error) {
+          const tooLarge = error instanceof Error && error.message === 'payload-too-large'
+          sendJson(response, tooLarge ? 413 : 400, { error: tooLarge ? 'demasiado-grande' : 'json-invalido' })
+          return
+        }
 
-      if (
-        typeof baseRevision !== 'number' ||
-        !Number.isInteger(baseRevision) ||
-        baseRevision < 0 ||
-        typeof blob !== 'string' ||
-        blob.length === 0 ||
-        blob.length > SYNC_BODY_LIMIT
-      ) {
-        sendJson(response, 400, { error: 'datos-invalidos' })
+        if (!body || typeof body !== 'object') {
+          sendJson(response, 400, { error: 'se-espera-un-objeto' })
+          return
+        }
+
+        safeWrite('settings.json', body)
+        sendJson(response, 200, { ok: true })
         return
       }
-
-      const current = readStore()
-      if (baseRevision !== current.revision) {
-        // El cliente mezcla con lo que devolvemos y reenvía.
-        sendJson(response, 409, current)
-        return
-      }
-
-      const next: SyncStore = {
-        revision: current.revision + 1,
-        updatedAt: Date.now(),
-        blob,
-      }
-      writeStore(next)
-      sendJson(response, 200, next)
-      return
     }
 
     sendJson(response, 404, { error: 'no-encontrado' })
@@ -426,25 +347,21 @@ function syncStore(): Plugin {
 
   const middleware = (request: IncomingMessage, response: ServerResponse) => {
     void handle(request, response).catch((error: unknown) => {
-      console.error('[sync]', error)
+      console.error('[data]', error)
       if (!response.headersSent) sendJson(response, 500, { error: 'error-interno' })
       else response.end()
     })
   }
 
   return {
-    name: 'combined-sync-store',
+    name: 'combined-data-store',
     configResolved(config) {
       root = config.root
     },
     configureServer(server) {
-      // Crear el token al arrancar: si se espera a la primera petición, un
-      // cliente sin token recibe 401 antes de que el archivo exista.
-      token()
       server.middlewares.use('/api', middleware)
     },
     configurePreviewServer(server) {
-      token()
       server.middlewares.use('/api', middleware)
     },
   }
@@ -459,7 +376,7 @@ const ALLOWED_HOSTS = (process.env.ALLOWED_HOSTS ?? '')
   .filter(Boolean)
 
 export default defineConfig({
-  plugins: [react(), mediaProxy(), syncStore()],
+  plugins: [react(), mediaProxy(), dataStore()],
   server: { proxy, allowedHosts: ALLOWED_HOSTS },
   preview: { proxy, allowedHosts: ALLOWED_HOSTS },
 })

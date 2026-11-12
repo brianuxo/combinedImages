@@ -1,42 +1,35 @@
 import { createContext, useContext } from 'react'
-import type { SyncTombstone } from '../lib/sync'
 
-/** Configuración guardada en este dispositivo para hablar con la instancia. */
-export interface SyncConfig {
-  enabled: boolean
-  /** Credencial Bearer derivada de la frase (no es la frase). */
-  token: string
-  passphrase: string
-  revision: number
-  lastSyncAt: number | null
-  tombstones: SyncTombstone[]
-}
-
+/**
+ * Stub de sincronización: ahora los datos se guardan directamente en el
+ * servidor sin necesidad de frase de sincronización. Este contexto se
+ * conserva para no romper los componentes que aún lo consultan.
+ */
 export type SyncStatus = 'off' | 'idle' | 'syncing' | 'error' | 'offline'
 
 export interface SyncApi {
+  /** Siempre activo: los datos van directo al servidor. */
   enabled: boolean
   status: SyncStatus
   error: string | null
   lastSyncAt: number | null
   revision: number
-  /** Hay cambios locales esperando a subir. */
   pending: boolean
-  /** Vincula este dispositivo con la frase. Devuelve false si no se pudo. */
   enable: (passphrase: string) => Promise<boolean>
-  /** Olvida la frase en este dispositivo (los datos se quedan). */
   disable: () => void
-  /** Fuerza una bajada y, si hay cambios pendientes, una subida. */
   syncNow: () => Promise<void>
 }
 
-export const EMPTY_SYNC_CONFIG: SyncConfig = {
-  enabled: false,
-  token: '',
-  passphrase: '',
-  revision: 0,
+export const STUB_SYNC: SyncApi = {
+  enabled: true,
+  status: 'idle',
+  error: null,
   lastSyncAt: null,
-  tombstones: [],
+  revision: 0,
+  pending: false,
+  enable: async () => true,
+  disable: () => {},
+  syncNow: async () => {},
 }
 
 export const SyncContext = createContext<SyncApi | null>(null)
