@@ -1,6 +1,7 @@
 import type { ImageItem, ProviderId } from '../types'
 import { hasServerProxy } from './env'
 import { buildProxyUrl, sameOriginUrls } from './proxy'
+import { capDisplayUrl } from './resize'
 
 /**
  * URLs del CDN de Gelbooru y Rule34, que bloquean el hotlink por referer.
@@ -54,24 +55,36 @@ export function proxiedUrl(
  * Para *mostrar* no hace falta leer el binario: un `<img>` carga la imagen
  * aunque el CDN no mande CORS, y con `referrerPolicy="no-referrer"` los CDNs
  * que odian el hotlink (Yande.re redirige al post con referer ajeno; Konachan
- * funciona igual sin referer) la sirven. Por eso el primer intento de cada
- * nivel de resolución (`thumb`, `preview`, `full`) es la URL directa: la
- * imagen va del CDN al dispositivo y el servidor de la app solo recibe lo
- * inevitable (el JSON de las APIs sin CORS, las descargas y los CDNs que
- * exigen referer propio, que ya llegan como rutas `/media`).
+ * funciona igual sin referer) la sirven.
  *
- * El segundo intento de cada nivel es la misma imagen por el servidor
- * (`proxiedUrl`), para los despliegues o los caprichos del CDN que la
+ * El primer intento de cada nivel de resolución (`thumb`, `preview`, `full`)
+ * es la URL directa **topada a `maxSide` px** en su lado mayor (`capDisplayUrl`):
+ * en calidad Óptimo/General las imágenes nunca superan 1920/2984 px aunque la
+ * original sea enorme, lo que ahorra datos y memoria en móviles. El segundo
+ * intento es la URL directa sin tocar y el tercero la misma imagen por el
+ * servidor (`proxiedUrl`), para los despliegues o los caprichos del CDN que la
  * bloqueen. Los candidatos repetidos se descartan: hay fuentes que devuelven
  * `thumb === preview`.
+ *
+ * `startLevel` elige por qué nivel se empieza: la rejilla usa `thumb` y el
+ * visor (`Lightbox`) usa `preview`, así la vista ampliada muestra lo máximo
+ * que permite la calidad seleccionada. El último candidato siempre es el
+ * original (`full`), por si todo lo demás falla.
  */
 export function displayUrls(
   provider: ProviderId,
-  item: Pick<ImageItem, 'thumb' | 'preview' | 'full'>,
+  item: Pick<ImageItem, 'thumb' | 'preview' | 'full'> &
+    Partial<Pick<ImageItem, 'width' | 'height'>>,
   proxyUrl?: string,
+  maxSide = 0,
+  startLevel: 'thumb' | 'preview' = 'thumb',
 ): string[] {
-  const levels = [item.thumb, item.preview, item.full].filter(Boolean)
-  const urls = levels.flatMap((level) => [
+  const levels =
+    startLevel === 'preview'
+      ? [item.preview, item.thumb, item.full]
+      : [item.thumb, item.preview, item.full]
+  const urls = levels.filter(Boolean).flatMap((level) => [
+    capDisplayUrl(provider, level, item, maxSide, proxyUrl),
     level,
     proxiedUrl(provider, level, proxyUrl),
   ])

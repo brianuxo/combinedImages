@@ -85,6 +85,30 @@ function refererFor(hostname: string): string | undefined {
   return undefined
 }
 
+// Tope duro del ancho pedido y del tamaño de la imagen original que se lee
+// para redimensionar: evitan peticiones abusivas contra el servidor propio.
+const MAX_RESIZE_WIDTH = 7680
+const MAX_RESIZE_SOURCE_BYTES = 60 * 1024 * 1024
+
+/**
+ * Redimensiona una imagen a lo sumo `width` px en su lado mayor, conservando
+ * la proporción y sin ampliar (`fit: inside` + `withoutEnlargement`). Sale
+ * como WebP para pesar menos en el móvil.
+ */
+async function resizeImage(buffer: Buffer, width: number): Promise<Buffer> {
+  const sharp = (await import('sharp')).default
+  return sharp(buffer)
+    .resize({ width, height: width, fit: 'inside', withoutEnlargement: true })
+    .webp({ quality: 82 })
+    .toBuffer()
+}
+
+function parseWidth(value: string | null): number {
+  const width = Number(value ?? 0)
+  if (!Number.isFinite(width) || width <= 0) return 0
+  return Math.min(Math.round(width), MAX_RESIZE_WIDTH)
+}
+
 async function handleMedia(
   request: IncomingMessage,
   response: ServerResponse,
@@ -137,6 +161,45 @@ async function handleMedia(
     return
   }
 
+  response.setHeader('Access-Control-Allow-Origin', '*')
+
+  if (!upstream.ok || !upstream.body) {
+    // Los errores se sirven igual (el `<img>` reacciona al estado), pero sin
+    // nada que anime al navegador a guardarlos.
+    response.statusCode = upstream.status
+    response.setHeader('Cache-Control', 'no-store')
+    response.end()
+    return
+  }
+
+  // Con `?w=N` la imagen se redimensiona en el servidor a lo sumo N px en su
+  // lado mayor (la app lo pide en calidad Óptimo/General para mostrar menos
+  // píxeles en móviles). Sin `w` se comporta como antes.
+  const width = parseWidth(requestUrl.searchParams.get('w'))
+  if (width > 0) {
+    const source = Buffer.from(await upstream.arrayBuffer())
+    if (source.byteLength === 0 || source.byteLength > MAX_RESIZE_SOURCE_BYTES) {
+      response.statusCode = 502
+      response.setHeader('Cache-Control', 'no-store')
+      response.end('Imagen demasiado grande para redimensionar')
+      return
+    }
+    try {
+      const resized = await resizeImage(source, width)
+      response.statusCode = 200
+      response.setHeader('Content-Type', 'image/webp')
+      response.setHeader('Content-Length', String(resized.byteLength))
+      // La URL lleva el MD5 del archivo y el ancho pedido: se puede cachear.
+      response.setHeader('Cache-Control', 'public, max-age=2592000, immutable')
+      response.end(resized)
+    } catch {
+      response.statusCode = 502
+      response.setHeader('Cache-Control', 'no-store')
+      response.end('No se pudo redimensionar la imagen')
+    }
+    return
+  }
+
   response.statusCode = upstream.status
   response.setHeader(
     'Content-Type',
@@ -144,15 +207,6 @@ async function handleMedia(
   )
   const contentLength = upstream.headers.get('content-length')
   if (contentLength) response.setHeader('Content-Length', contentLength)
-  response.setHeader('Access-Control-Allow-Origin', '*')
-
-  if (!upstream.ok || !upstream.body) {
-    // Los errores se sirven igual (el `<img>` reacciona al estado), pero sin
-    // nada que anime al navegador a guardarlos.
-    response.setHeader('Cache-Control', 'no-store')
-    response.end()
-    return
-  }
 
   // Las URLs llevan el MD5 del archivo: una URL es siempre el mismo archivo,
   // así que el navegador puede guardarlo y no volver a pedirlo en semanas.
@@ -168,14 +222,102 @@ async function handleMedia(
   stream.on('error', () => response.destroy())
 }
 
+/**
+ * `/resize?url=…&w=N`: proxy de imágenes con redimensionado para cualquier
+ * host https (Danbooru, Openverse, Pixabay, Wikimedia, Konachan, Wallhaven…).
+ *
+ * A diferencia de `/media` no envía referer (Wallhaven bloquea las peticiones
+ * con referer) y no está limitado a los hosts de Gelbooru/Rule34. Solo sirve
+ * para *mostrar*: la descarga siempre usa el original.
+ */
+async function handleResize(
+  request: IncomingMessage,
+  response: ServerResponse,
+  next: (error?: unknown) => void,
+) {
+  const requestUrl = new URL(request.url ?? '/', 'http://localhost')
+
+  if (requestUrl.pathname !== '/' && requestUrl.pathname !== '') {
+    next()
+    return
+  }
+
+  const target = requestUrl.searchParams.get('url')
+  const width = parseWidth(requestUrl.searchParams.get('w'))
+  if (!target || width <= 0) {
+    response.statusCode = 400
+    response.end('Faltan los parámetros ?url= y ?w=')
+    return
+  }
+
+  let parsed: URL
+  try {
+    parsed = new URL(target)
+  } catch {
+    response.statusCode = 400
+    response.end('URL inválida')
+    return
+  }
+
+  // Solo https: nada de apuntar el servidor a la red interna.
+  if (parsed.protocol !== 'https:') {
+    response.statusCode = 403
+    response.end('Solo se aceptan URLs https')
+    return
+  }
+
+  let upstream: Response
+  try {
+    upstream = await fetch(parsed.toString(), {
+      headers: { Accept: 'image/*,*/*;q=0.8', 'User-Agent': USER_AGENT },
+    })
+  } catch {
+    response.statusCode = 502
+    response.end('No se pudo obtener la imagen')
+    return
+  }
+
+  response.setHeader('Access-Control-Allow-Origin', '*')
+
+  if (!upstream.ok || !upstream.body) {
+    response.statusCode = upstream.status
+    response.setHeader('Cache-Control', 'no-store')
+    response.end()
+    return
+  }
+
+  const source = Buffer.from(await upstream.arrayBuffer())
+  if (source.byteLength === 0 || source.byteLength > MAX_RESIZE_SOURCE_BYTES) {
+    response.statusCode = 502
+    response.setHeader('Cache-Control', 'no-store')
+    response.end('Imagen demasiado grande para redimensionar')
+    return
+  }
+
+  try {
+    const resized = await resizeImage(source, width)
+    response.statusCode = 200
+    response.setHeader('Content-Type', 'image/webp')
+    response.setHeader('Content-Length', String(resized.byteLength))
+    response.setHeader('Cache-Control', 'public, max-age=2592000, immutable')
+    response.end(resized)
+  } catch {
+    response.statusCode = 502
+    response.setHeader('Cache-Control', 'no-store')
+    response.end('No se pudo redimensionar la imagen')
+  }
+}
+
 function mediaProxy(): Plugin {
   return {
     name: 'combined-media-proxy',
     configureServer(server) {
       server.middlewares.use('/media', handleMedia)
+      server.middlewares.use('/resize', handleResize)
     },
     configurePreviewServer(server) {
       server.middlewares.use('/media', handleMedia)
+      server.middlewares.use('/resize', handleResize)
     },
   }
 }
