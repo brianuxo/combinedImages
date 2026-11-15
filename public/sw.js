@@ -2,9 +2,10 @@
  * Service worker de Combined.
  *
  * Guarda el armazón de la app (HTML, JS, CSS, fuentes e iconos) para poder abrirla
- * sin conexión. Nunca toca /proxy/*, /media ni /api: por ahí pasan las búsquedas,
- * las imágenes, las descargas de las fuentes y el paquete de sincronización, y
- * esas respuestas no se guardan en el dispositivo.
+ * sin conexión. Nunca toca /proxy/*, /media, /resize ni /api: por ahí pasan las
+ * búsquedas, las imágenes (incluidas las redimensionadas al tope de la calidad),
+ * las descargas de las fuentes y el paquete de sincronización, y esas respuestas
+ * no se guardan en el dispositivo.
  *
  * Los assets de Vite llevan hash en el nombre, así que se pueden cachear para
  * siempre: si cambia el código, cambia el nombre. El HTML sí va a red primero,
@@ -63,6 +64,7 @@ const isPrivate = (pathname) =>
   pathname.startsWith('/proxy/') ||
   pathname === '/proxy' ||
   pathname.startsWith('/media') ||
+  pathname.startsWith('/resize') ||
   pathname.startsWith('/api/') ||
   pathname === '/api' ||
   pathname === '/sw.js'
