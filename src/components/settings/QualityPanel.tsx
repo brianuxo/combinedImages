@@ -12,19 +12,22 @@ const QUALITIES: {
   {
     id: 'max',
     name: 'Máxima',
-    description: 'Vista previa en la resolución más alta, animaciones completas y más imágenes por página.',
+    description:
+      'Sin límite de resolución en las vistas previas, animaciones completas y más imágenes por página.',
     icon: Sparkles,
   },
   {
     id: 'general',
     name: 'General',
-    description: 'Buen equilibrio entre nitidez, datos y fluidez. Recomendado para la mayoría.',
+    description:
+      'Las imágenes se muestran hasta 2984 px (lado mayor). Buen equilibrio entre nitidez, datos y fluidez. Recomendado para la mayoría.',
     icon: Gauge,
   },
   {
     id: 'optimo',
     name: 'Óptimo',
-    description: 'Modo mini: 12 imágenes por página, sin animaciones y con las siguientes a mano. Ideal para datos móviles.',
+    description:
+      'Las imágenes se muestran hasta 1920 px (lado mayor), 12 por página, sin animaciones y con las siguientes a mano. Ideal para móviles y datos limitados.',
     icon: Feather,
   },
 ]
@@ -63,6 +66,9 @@ export function QualityPanel() {
                     {Number.isFinite(QUALITY_LIMITS[quality.id].autoCap)
                       ? ` · tope ${QUALITY_LIMITS[quality.id].autoCap}`
                       : ''}
+                    {QUALITY_LIMITS[quality.id].maxSide > 0
+                      ? ` · imágenes hasta ${QUALITY_LIMITS[quality.id].maxSide} px`
+                      : ' · sin límite de px'}
                   </em>
                 </span>
                 <span className="q-radio">{active && <Check size={14} />}</span>
@@ -74,10 +80,11 @@ export function QualityPanel() {
 
       <section className="panel-section">
         <p className="hint">
-          La calidad afecta a las vistas previas, al número de resultados por página y a la
+          La calidad afecta al tamaño máximo de las imágenes que se muestran (Óptimo: 1920 px,
+          General: 2984 px en el lado mayor), al número de resultados por página y a la
           intensidad de las animaciones. En Óptimo la galería se detiene a las 12 imágenes y
           el resto se pide con «Ver más». La descarga siempre guarda el archivo original
-          disponible en la fuente.
+          disponible en la fuente, sea cual sea la calidad.
         </p>
       </section>
     </>

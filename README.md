@@ -10,7 +10,7 @@ SPA para explorar y descargar imágenes y fondos de pantalla de varias fuentes d
 - **Galería** masonry con scroll infinito, búsqueda por tags o palabras, lightbox y descarga.
 - **Panel lateral** con tres pestañas: Ajustes, Tema y Calidad.
 - **Lista negra global** de tags y palabras clave (se envía a los booru como `-tag`).
-- **Calidad** en tres niveles: máxima, general y óptimo. Afecta a las vistas previas, a las animaciones y al número de resultados; en Óptimo la galería se detiene a las 12 tarjetas y las siguientes se piden con **«Ver más»**. En pantallas de hasta 720 px se elige Óptimo de entrada.
+- **Calidad** en tres niveles: máxima, general y óptimo. Afecta al tamaño máximo de las imágenes que se muestran, a las animaciones y al número de resultados. En **Óptimo** las miniaturas y la vista ampliada se muestran hasta **1920 px** en el lado mayor (ancho o alto); en **General** hasta **2984 px**; en **Máxima** sin límite. En Óptimo la galería se detiene a las 12 tarjetas y las siguientes se piden con **«Ver más»**. En pantallas de hasta 720 px se elige Óptimo de entrada. La **descarga siempre guarda el archivo original** de la fuente, sea cual sea la calidad, y el visor muestra «Resolución original = …». Las imágenes topadas se redimensionan en el propio servidor (`/resize` y `/media?w=`) cuando la app corre en tu instancia; sin servidor propio se usa wsrv.nl para las fuentes de imagen directa.
 - **Sincronización entre dispositivos** (opcional): favoritos, claves API, lista negra y ajustes viajan cifrados a tu instancia y se comparten entre el PC y el móvil. La calidad de imagen se queda en cada equipo.
 - **Tema** oscuro con tres variantes y seis colores de acento.
 - **NSFW oculto por defecto**: el panel de Ajustes no menciona nada de contenido adulto hasta que pulsas la tecla **F** o haces un **doble toque sobre la versión** (la del pie de inicio o la de Ajustes; el primer toque avisa de que falta el segundo, y a los dos segundos se cancela). Eso hace aparecer la sección *Contenido adulto* con el interruptor a la vista. Al activarlo aparecen **Gelbooru** y **Rule34** en la barra de fuentes y en el inicio; la preferencia queda guardada en el navegador (y, con la sincronización activa, también en tus dispositivos), así que no hay que repetirla. Pulsando **F** (o con otro doble toque) la sección desaparece y el modo adulto se desactiva. También funciona manteniendo pulsado el logo 1,5 s.
@@ -54,7 +54,7 @@ npm install
 npm run dev
 ```
 
-Vite incluye proxies en `vite.config.ts` para Konachan, Yande.re, Anime-Pictures, Gelbooru y Wallhaven, además de un middleware `/media` que sirve las imágenes de Gelbooru y Rule34 con el referer correcto. En desarrollo las once fuentes funcionan sin configuración extra.
+Vite incluye proxies en `vite.config.ts` para Konachan, Yande.re, Anime-Pictures, Gelbooru y Wallhaven, además de un middleware `/media` que sirve las imágenes de Gelbooru y Rule34 con el referer correcto y un middleware `/resize?url=…&w=N` que redimensiona cualquier imagen https a lo sumo N píxeles (con `sharp`, solo en el servidor). En desarrollo las once fuentes funcionan sin configuración extra.
 
 ```bash
 npm run build     # tsc + vite build

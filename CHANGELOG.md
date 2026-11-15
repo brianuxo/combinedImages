@@ -2,6 +2,30 @@
 
 Todas las novedades de Combined.
 
+## Sin publicar
+
+### Añadido
+
+- **Tope de resolución al mostrar imágenes**, pensado para que la galería vaya
+  fluida en móviles menos potentes. En calidad **Óptimo** las miniaturas y la
+  vista ampliada se muestran hasta **1920 px** en el lado mayor (ancho o alto);
+  en **General** hasta **2984 px**; en **Máxima** no hay límite. La imagen se
+  escala en proporción, nunca se deforma ni se amplía.
+- El visor (lightbox) muestra **«Mostrando: X × Y»** cuando la imagen se está
+  viendo reducida y **«Resolución original = W × H»** siempre, y el botón de
+  descarga dice **«Descargar original»**. En las tarjetas, el tamaño del chip
+  indica la resolución original (tooltip: «la descarga guarda este archivo»).
+- **La descarga no cambia**: siempre baja el archivo original de la fuente,
+  sea cual sea la calidad seleccionada.
+- Redimensionado del lado del servidor propio: `/resize?url=…&w=N` (cualquier
+  host https, con `sharp`) y `/media?url=…&w=N` (Gelbooru/Rule34, con el referer
+  correcto). Sin servidor propio, las fuentes de imagen directa usan
+  **wsrv.nl** como resizer externo.
+- Wikimedia pide la vista ampliada directamente con el ancho del tope
+  (`Special:FilePath?width=…`).
+- Pruebas unitarias de `cappedSize`/`capDisplayUrl` y de la cadena de
+  candidatos con tope (`resize.test.ts`, `media.test.ts`).
+
 ## 1.0.0 — 2026-10-20
 
 ### Añadido

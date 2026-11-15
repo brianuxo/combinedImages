@@ -11,7 +11,10 @@ import {
   X,
 } from 'lucide-react'
 import { useFavorites } from '../../context/favorites'
+import { useSettings } from '../../context/settings'
+import { maxSideFor } from '../../lib/format'
 import { displayUrls } from '../../lib/media'
+import { cappedSize } from '../../lib/resize'
 import type { ImageItem } from '../../types'
 
 const RATING_LABEL = {
@@ -55,12 +58,15 @@ export function Lightbox({
     if (item) favorites.toggle(item)
   }, [favorites, item])
 
-  // Igual que en la rejilla: primero se pide al CDN directamente —el
-  // dispositivo la carga del origen, no del servidor de la app— y, si el
-  // CDN la bloquea, se reintentan por el proxy del servidor.
+  // En la vista ampliada se empieza por el nivel `preview` (no por la
+  // miniatura) topado a la calidad seleccionada: en Óptimo/General nunca se
+  // muestra más de 1920/2984 px en el lado mayor. La descarga sigue usando el
+  // original (`item.full`).
+  const { settings } = useSettings()
+  const maxSide = maxSideFor(settings.quality)
   const candidates = useMemo(
-    () => (item ? displayUrls(item.provider, item, proxyUrl) : []),
-    [item, proxyUrl],
+    () => (item ? displayUrls(item.provider, item, proxyUrl, maxSide, 'preview') : []),
+    [item, proxyUrl, maxSide],
   )
   // El contador de intentos vive junto a la clave de la imagen mostrada:
   // al cambiar de imagen —durante el propio render— vuelve a empezar por
@@ -104,6 +110,9 @@ export function Lightbox({
   }, [index, items.length, onClose, onNavigate, toggleFavorite])
 
   if (!item) return null
+
+  const shown = cappedSize(item.width, item.height, maxSide)
+  const resized = shown.width !== item.width || shown.height !== item.height
 
   return (
     <motion.div
@@ -181,8 +190,16 @@ export function Lightbox({
           </div>
 
           <div className="lb-facts">
+            {resized && (
+              <div>
+                <span>Mostrando</span>
+                <strong>
+                  {shown.width} × {shown.height}
+                </strong>
+              </div>
+            )}
             <div>
-              <span>Resolución</span>
+              <span>Resolución original =</span>
               <strong>
                 {item.width > 0 && item.height > 0
                   ? `${item.width} × ${item.height}`
@@ -238,9 +255,14 @@ export function Lightbox({
               {saved ? 'Guardado en favoritos' : 'Guardar en favoritos'}
             </button>
             <div className="lb-actions-row">
-              <button type="button" className="btn btn-primary" onClick={() => onDownload(item)}>
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => onDownload(item)}
+                title={`Descarga el archivo original (${item.width > 0 && item.height > 0 ? `${item.width} × ${item.height}` : 'resolución desconocida'})`}
+              >
                 <Download size={16} />
-                Descargar
+                Descargar original
               </button>
               <a
                 className="btn btn-ghost"

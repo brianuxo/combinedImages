@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Download, ExternalLink, Heart } from 'lucide-react'
 import { useFavorites } from '../../context/favorites'
+import { useSettings } from '../../context/settings'
+import { maxSideFor } from '../../lib/format'
 import { displayUrls } from '../../lib/media'
 import { imageRatio, isExtremeRatio } from '../../lib/masonry'
 import type { ImageItem } from '../../types'
@@ -24,9 +26,13 @@ export function ImageCard({
   // `referrerPolicy="no-referrer"` los CDNs que odian el referer ajeno la
   // sirven igualmente. Si el CDN la bloquea, el siguiente candidato la trae
   // por el proxy del servidor y la tarjeta no se queda rota.
+  // En Óptimo/General la miniatura se pide ya topada (1920/2984 px en el lado
+  // mayor) para que la galería vaya fluida en móviles menos potentes.
+  const { settings } = useSettings()
+  const maxSide = maxSideFor(settings.quality)
   const candidates = useMemo(
-    () => displayUrls(item.provider, item, proxyUrl),
-    [item, proxyUrl],
+    () => displayUrls(item.provider, item, proxyUrl, maxSide, 'thumb'),
+    [item, proxyUrl, maxSide],
   )
 
   const [index, setIndex] = useState(0)
@@ -77,7 +83,7 @@ export function ImageCard({
               <span key={tag}>{tag.replace(/_/g, ' ')}</span>
             ))}
           </div>
-          <span className="img-size">
+          <span className="img-size" title="Resolución original (la descarga guarda este archivo)">
             {item.width > 0 && item.height > 0 ? `${item.width} × ${item.height}` : '—'}
           </span>
         </div>

@@ -1,4 +1,5 @@
 import type { ImageItem, SearchArgs, SearchResponse } from '../../types'
+import { maxSideFor } from '../format'
 import { fetchJson } from '../http'
 
 interface WikimediaImageInfo {
@@ -31,6 +32,17 @@ function stripHtml(value?: string): string | undefined {
 }
 
 const THUMB_WIDTH = { max: 1600, general: 1280, optimo: 960 } as const
+
+/**
+ * Vista ampliada: Wikimedia genera miniaturas a cualquier ancho con
+ * `Special:FilePath`, así que en Óptimo/General se pide directamente la
+ * versión topada (1920/2984 px en el lado mayor) en vez de la original.
+ */
+function previewFor(page: WikimediaPage, info: WikimediaImageInfo, maxSide: number): string {
+  if (!maxSide || info.width <= maxSide) return info.thumburl || info.url
+  const file = page.title.replace(/^File:/i, '')
+  return `https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=${maxSide}`
+}
 
 export async function searchWikimedia(args: SearchArgs): Promise<SearchResponse> {
   const params = new URLSearchParams({
@@ -70,7 +82,7 @@ export async function searchWikimedia(args: SearchArgs): Promise<SearchResponse>
         provider: 'wikimedia',
         providerLabel: 'Wikimedia',
         thumb: info.thumburl || info.url,
-        preview: info.thumburl || info.url,
+        preview: previewFor(page, info, maxSideFor(args.quality)),
         full: info.url,
         width: info.width,
         height: info.height,
